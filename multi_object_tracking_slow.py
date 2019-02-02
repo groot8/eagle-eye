@@ -172,12 +172,19 @@ while True:
 			#print(str(t))
 			pos = t.get_position()
 			# unpack the position object
-			startX = int(pos.left())
-			startY = int(pos.top())
-			endX = int(pos.right())
-			endY = int(pos.bottom())
-			subimg = rgb[startY-30:endY+30, startX-30:endX+30]
-
+			startX, startY = int(pos.left()), int(pos.top())
+			endX, endY= int(pos.right()), int(pos.bottom())
+			print('sx', startX)
+			print('sy', startY)
+			print('ex', endX)
+			print('ey', endY)
+			h_orig, w_orig = frame.shape[:2]
+			padding = 30
+			xstartX = startX-padding if startX-padding>=0 else 0  
+			xstartY = startY-padding if startY-padding>=0  else 0
+			xendX = endX+padding if endX+padding<=w_orig else w_orig 
+			xendY = endY+padding if endY+padding<=h_orig else h_orig  
+			subimg = frame[xstartY:xendY, xstartX:xendX]
 			(h, w) = subimg.shape[:2]
 			blobx = cv2.dnn.blobFromImage(subimg, 0.007843, (w, h), 127.5)
 			# pass the blob through the network and obtain the detections
