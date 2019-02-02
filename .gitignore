@@ -1,4 +1,4 @@
 env
 __pychache__
 *.pyc
-
+.vscode
