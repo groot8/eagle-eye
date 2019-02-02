@@ -35,7 +35,7 @@ def search_and_match(point):
 			minError = error
 			target = t
 	#print(minError)
-	if minError < 50:
+	if minError < 25:
 		return target
 	else:
 		return None
@@ -60,7 +60,8 @@ writer = None
 # labels	
 trackers = []
 labels = []
-
+lives = []
+livesCounter = 3
 # start the frames per second throughput estimator
 fps = FPS().start()
 
@@ -102,6 +103,42 @@ while True:
 	# if there are no object trackers we first need to detect objects
 	# and then create a tracker for each object
 	if detection_counter == 0:
+    		
+				# loop over each of the trackers
+		index = 0
+		for (t, l, c) in zip(trackers, labels, lives):
+			pos = t.get_position()
+			startX, startY = int(pos.left()), int(pos.top())
+			endX, endY= int(pos.right()), int(pos.bottom())
+			h_orig, w_orig = frame.shape[:2]
+			padding = 50
+			xstartX = startX-padding if startX-padding>=0 else 0  
+			xstartY = startY-padding if startY-padding>=0  else 0
+			xendX = endX+padding if endX+padding<=w_orig else w_orig 
+			xendY = endY+padding if endY+padding<=h_orig else h_orig  
+			subimg = frame[xstartY:xendY, xstartX:xendX]
+			(h, w) = subimg.shape[:2]
+			blobx = cv2.dnn.blobFromImage(subimg, 0.007843, (w, h), 127.5)
+			net.setInput(blobx)
+			detectionsx = net.forward()
+			confidencex = detectionsx[0, 0, 0, 2]
+			print("insha2allah",confidencex)
+			
+			if confidencex <= 0.3:
+				print('lives: ',lives)
+				if c  <= 0:
+					trackers.remove(t)
+					labels.remove(l)
+					lives.remove(c)
+					print('removed...', l)
+				else:
+					lives[index]-=(1-confidencex)*1.2
+			else:
+				lives[index] = lives[index]+(1-confidencex) if lives[index]<3 else 3
+					
+
+    			
+			index += 1
 		# grab the frame dimensions and convert the frame to a blob
 		(h, w) = frame.shape[:2]
 		blob = cv2.dnn.blobFromImage(frame, 0.007843, (w, h), 127.5)
@@ -153,6 +190,7 @@ while True:
 				# labels
 				labels.append(label)
 				trackers.append(t)
+				lives.append(livesCounter)
 
 				# grab the corresponding class label for the detection
 				# and draw the bounding box
@@ -174,36 +212,12 @@ while True:
 			# unpack the position object
 			startX, startY = int(pos.left()), int(pos.top())
 			endX, endY= int(pos.right()), int(pos.bottom())
-			print('sx', startX)
-			print('sy', startY)
-			print('ex', endX)
-			print('ey', endY)
-			h_orig, w_orig = frame.shape[:2]
-			padding = 30
-			xstartX = startX-padding if startX-padding>=0 else 0  
-			xstartY = startY-padding if startY-padding>=0  else 0
-			xendX = endX+padding if endX+padding<=w_orig else w_orig 
-			xendY = endY+padding if endY+padding<=h_orig else h_orig  
-			subimg = frame[xstartY:xendY, xstartX:xendX]
-			(h, w) = subimg.shape[:2]
-			blobx = cv2.dnn.blobFromImage(subimg, 0.007843, (w, h), 127.5)
-			# pass the blob through the network and obtain the detections
-			# and predictions
-			net.setInput(blobx)
-			detectionsx = net.forward()
-			confidencex = detectionsx[0, 0, 0, 2]
-			print("insha2allah",confidencex)
-			#cv2.imshow('test',test)
-			#with open("Output.txt",'w') as ofile:
-			#	ofile.write(str(test))
-
-
 			# draw the bounding box from the correlation object tracker
-			if confidencex != 0:
-				cv2.rectangle(frame, (startX, startY), (endX, endY),
-					(0, 255, 0), 2)
-				cv2.putText(frame, l, (startX, startY - 15),
-					cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
+			# if confidencex >= 0.5:
+			cv2.rectangle(frame, (startX, startY), (endX, endY),
+				(0, 255, 0), 2)
+			cv2.putText(frame, l, (startX, startY - 15),
+				cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
 
 	# check to see if we should write the frame to disk
 	if writer is not None:
