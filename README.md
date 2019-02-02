@@ -12,3 +12,6 @@ source env/bin/activate
 make sure that (env) shown before your username in the terminal
 - install the dependancies 
 pip3 install -r requirements.txt
+
+HOW TO RUN:
+python multi_object_tracking_slow.py --prototxt mobilenet_ssd/MobileNetSSD_deploy.prototxt \--model mobilenet_ssd/MobileNetSSD_deploy.caffemodel --video <video> --output <output video>
