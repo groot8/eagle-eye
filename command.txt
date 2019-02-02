@@ -1,0 +1,1 @@
+python multi_object_tracking_slow.py --prototxt mobilenet_ssd/MobileNetSSD_deploy.prototxt \--model mobilenet_ssd/MobileNetSSD_deploy.caffemodel \--video race.mp4 --output race_output_fast.avi
