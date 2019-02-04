@@ -1,5 +1,5 @@
 import argparse
-from edited_tracker import avatar
+from tracker import avatar
 def main():
     # construct the argument parser and parse the arguments
     ap = argparse.ArgumentParser()
