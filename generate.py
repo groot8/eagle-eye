@@ -9,9 +9,12 @@ G2 = np.array([[0.177291,0.004724,31.224545],[0.169895,0.661935,-79.781865],[-0.
 
 H1 = np.array([[0.053299,1.247713,13.803214],[-0.180912,0.622446,-0.125533],[-0.000002,0.001756,0.102316]])
 H2 = np.array([[0.081202,0.089186,14.746465],[0.070703,1.091119,-8.872128],[0.000001,0.003361,0.097146]])
+H1_normalized = H1/H1[2][2]
+H2_normalized = H2/H2[2][2]
 
-img1Out = cv2.warpPerspective(img1, H1, (img1.shape[1], img1.shape[0]))
-img2Out = cv2.warpPerspective(img2, H2, (img2.shape[1], img2.shape[0]))
+
+img1Out = cv2.warpPerspective(img1, H1_normalized, 700,500)
+img2Out = cv2.warpPerspective(img2, H2_normalized, 700,500)
 
 cv2.imshow('img 1 orig',img1)
 cv2.imshow('img 1 trans',img1Out)

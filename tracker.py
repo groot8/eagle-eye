@@ -9,30 +9,44 @@ import imutils
 import dlib
 import cv2
 import math
+
+stream_num = 0
+
+
+def intersectionOverUnion(bouns1, bouns2):
+    (startX, startY, endX, endY) = (
+        max(bouns1[0], bouns2[0]),
+        max(bouns1[1], bouns2[1]),
+        min(bouns1[2], bouns2[2]),
+        min(bouns1[3], bouns2[3])
+    )
+    if startX > endX or startY > endY:
+        return 0
+    intersection = (endX - startX)*(endY - startY)
+    area1 = (bouns1[2] - bouns1[0])*(bouns1[3] - bouns1[1])
+    area2 = (bouns2[2] - bouns2[0])*(bouns2[3] - bouns2[1])
+    if bouns1[0] >= bouns2[0] and bouns1[1] >= bouns2[1] and bouns1[2] <= bouns2[2] and bouns1[3] <= bouns2[3]:
+        return 1
+    if bouns2[0] >= bouns1[0] and bouns2[1] >= bouns1[1] and bouns2[2] <= bouns1[2] and bouns2[3] <= bouns1[3]:
+        return 1
+    return intersection / (area1 + area2 - intersection)
+
+
 class avatar():
     # initialize the list of class labels MobileNet SSD was trained to
     # detect
     CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
-    	"bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
-    	"dog", "horse", "motorbike", "person", "pottedplant", "sheep",
-    	"sofa", "train", "tvmonitor"]
-    # initialize the list of object trackers and corresponding class
-    # labels	
-    trackers = []
-    labels = []
-    lives = []
-    # intialize id
-    id = 1
-    frame = None
-    # counter to reset trackers
-    detection_counter = 0
-    writer = None
-    
-    def __init__(self, prototxt, model, video, output, confidence, livesCounter = 3):
+               "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
+               "dog", "horse", "motorbike", "person", "pottedplant", "sheep",
+               "sofa", "train", "tvmonitor"]
+
+    maxintersectionOverUnion = 0.5
+    detection_interval = 1
+
+    def __init__(self, prototxt, model, video, output, confidence, calibration_file):
         # load our serialized model from disk
         # print("[INFO] loading model...")
         self.net = cv2.dnn.readNetFromCaffe(prototxt, model)
-        self.livesCounter = livesCounter
         # initialize the video stream and output video writer
         # print("[INFO] starting video stream...")
         self.vs = cv2.VideoCapture(video)
@@ -40,6 +54,20 @@ class avatar():
         self.fps = FPS().start()
         self.output = output
         self.confidence = confidence
+        global stream_num
+        stream_num += 1
+        self.stream_num = stream_num
+        # initialize the list of object trackers and corresponding class
+        # labels
+        self.trackers = []
+        self.labels = []
+        # intialize id
+        self.id = 1
+        self.frame = None
+        # counter to reset trackers
+        self.detection_counter = 0
+        self.writer = None
+        self.calibration_file = calibration_file
 
     def __del__(self):
         # stop the timer and display FPS information
@@ -54,6 +82,9 @@ class avatar():
         cv2.destroyAllWindows()
         self.vs.release()
 
+    def get_top_view(self, frame):
+        return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (700,500))
+
     def detect_people(self, img):
         (h, w) = img.shape[:2]
         blob = cv2.dnn.blobFromImage(img, 0.007843, (w, h), 127.5)
@@ -61,50 +92,45 @@ class avatar():
         detections = self.net.forward()
         return detections
 
+    def validate_trackers(self):
+        index = 0
+        for (t, l) in zip(self.trackers, self.labels):
+            pos = t.get_position()
+            # unpack the position object
+            startX, startY = int(pos.left()), int(pos.top())
+            endX, endY = int(pos.right()), int(pos.bottom())
+            if self.search_and_match(index) != -1:
+                self.trackers.remove(t)
+                self.labels.remove(l)
+            index += 1
 
-    def validate_trackers(self, frame):
-            index = 0
-            for (t, l, c) in zip(self.trackers, self.labels, self.lives):
-                pos = t.get_position()
-                startX, startY = int(pos.left()), int(pos.top())
-                endX, endY= int(pos.right()), int(pos.bottom())
-                h_orig, w_orig = frame.shape[:2]
-                padding = 50
-                startX = startX-padding if startX-padding>=0 else 0  
-                startY = startY-padding if startY-padding>=0  else 0
-                endX = endX+padding if endX+padding<=w_orig else w_orig 
-                endY = endY+padding if endY+padding<=h_orig else h_orig  
-                subimg = frame[startY:endY, startX:endX]
-                detections = self.detect_people(subimg)
-                confidence = detections[0,0,0,2]
-                print("confidence",confidence)
-                if confidence <= 0.3:
-                    print('lives: ',self.lives)
-                    if c  <= 0:
-                        self.trackers.remove(t)
-                        self.labels.remove(l)
-                        self.lives.remove(c)
-                        print('removed...', l)
-                    else:
-                        self.lives[index]-=(1-confidence)*1.2
-                else:
-                    self.lives[index] = self.lives[index]+(1-confidence) if self.lives[index]<3 else 3
-                index += 1
-
-    def search_and_match(self, point):
-        minError = math.inf
-        target = None
+    def search_and_match(self, tracker_index):
+        pos = self.trackers[tracker_index].get_position()
+        # unpack the position object
+        startX, startY = int(pos.left()), int(pos.top())
+        endX, endY = int(pos.right()), int(pos.bottom())
+        boundries = (startX, startY, endX, endY)
+        maxintersectionOverUnion = 0
+        target = -1
+        index = -1
         for t in self.trackers:
-            current = t.get_position().center()
-            error = math.sqrt((point[0]-current.x)**2+(point[1]-current.y)**2)
-            if error < minError:
-                minError = error
-                target = t
+            index += 1
+            if index <= tracker_index:
+                continue
+            pos = t.get_position()
+            # unpack the position object
+            startX, startY = int(pos.left()), int(pos.top())
+            endX, endY = int(pos.right()), int(pos.bottom())
+            temp = intersectionOverUnion(
+                boundries, (startX, startY, endX, endY))
+            if temp > maxintersectionOverUnion:
+                maxintersectionOverUnion = temp
+                target = index
         #print(minError)
-        if minError < 25:
+        if maxintersectionOverUnion > self.maxintersectionOverUnion:
             return target
         else:
-            return None
+            return -1
 
     def forward(self):
         	# grab the next frame from the video file
@@ -113,12 +139,12 @@ class avatar():
         current_FPS = self.vs.get(cv2.CAP_PROP_FPS)
         self.detection_counter += 1 / current_FPS
         # print(self.detection_counter)
-        if self.detection_counter >= 0.5:
+        if self.detection_counter >= self.detection_interval:
             self.detection_counter = 0
-        
+
         # check to see if we have reached the end of the video file
         if frame is None:
-            return 
+            return
 
         # resize the frame for faster processing and then convert the
         # frame from BGR to RGB ordering (dlib needs RGB ordering)
@@ -130,13 +156,14 @@ class avatar():
         if self.output is not None and self.writer is None:
             fourcc = cv2.VideoWriter_fourcc(*"MJPG")
             self.writer = cv2.VideoWriter(self.output, fourcc, 30,
-                (frame.shape[1], frame.shape[0]), True)
+                                          (frame.shape[1], frame.shape[0]), True)
 
         # if there are no object trackers we first need to detect objects
         # and then create a tracker for each object
         if self.detection_counter == 0:
-                
-            self.validate_trackers(frame)
+
+            self.trackers = []
+            self.labels = []
             detections = self.detect_people(frame)
 
             # loop over the detections
@@ -165,12 +192,7 @@ class avatar():
                     (startX, startY, endX, endY) = box.astype("int")
 
                     # if box match another one in range x continue
-                    center = (startX + (endX - startX) / 2, startY + (endY - startY) / 2)
-                    if self.search_and_match(center) is not None:
-                        continue
-
-                    self.id += 1
-
+                    # center = (startX + (endX - startX) / 2, startY + (endY - startY) / 2)
                     # construct a dlib rectangle object from the bounding
                     # box coordinates and start the correlation tracker
                     t = dlib.correlation_tracker()
@@ -181,14 +203,15 @@ class avatar():
                     # labels
                     self.labels.append(label)
                     self.trackers.append(t)
-                    self.lives.append(self.livesCounter)
 
                     # grab the corresponding class label for the detection
                     # and draw the bounding box
                     cv2.rectangle(frame, (startX, startY), (endX, endY),
-                        (0, 255, 0), 2)
+                                  (0, 255, 0), 2)
                     cv2.putText(frame, label, (startX, startY - 15),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
+
+            self.validate_trackers()
 
         # otherwise, we've already performed detection so let's track
         # multiple objects
@@ -202,20 +225,20 @@ class avatar():
                 pos = t.get_position()
                 # unpack the position object
                 startX, startY = int(pos.left()), int(pos.top())
-                endX, endY= int(pos.right()), int(pos.bottom())
+                endX, endY = int(pos.right()), int(pos.bottom())
                 # draw the bounding box from the correlation object tracker
                 # if confidencex >= 0.5:
                 cv2.rectangle(frame, (startX, startY), (endX, endY),
-                    (0, 255, 0), 2)
+                              (0, 255, 0), 2)
                 cv2.putText(frame, l, (startX, startY - 15),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
 
         # check to see if we should write the frame to disk
         if self.writer is not None:
             self.writer.write(frame)
 
         # show the output frame
-        cv2.imshow("Frame", frame)
+        cv2.imshow("Frame"+str(self.stream_num), self.get_top_view(frame))
         key = cv2.waitKey(1) & 0xFF
 
         # if the `q` key was pressed, break from the loop
@@ -224,4 +247,3 @@ class avatar():
 
         # update the FPS counter
         self.fps.update()
-
