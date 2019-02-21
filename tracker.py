@@ -32,6 +32,11 @@ def intersectionOverUnion(bouns1, bouns2):
     return intersection / (area1 + area2 - intersection)
 
 
+shape = (0, 0, 0)
+
+list_points = []
+
+
 class avatar():
     # initialize the list of class labels MobileNet SSD was trained to
     # detect
@@ -42,6 +47,19 @@ class avatar():
 
     maxintersectionOverUnion = 0.2
     detection_interval = 1
+
+    def reset_list_points():
+        global shape
+        board = np.zeros(shape, np.uint8)
+        # # Fill board with red color(set each pixel to red)
+        board[:] = (0, 0, 0)
+        global list_points
+        print('[list_points]', list_points)
+        for (point, color) in list_points:
+            cv2.circle(board, point, 10, color, -1)
+        list_points = []
+        cv2.imshow("Board",
+                   imutils.resize(board, width=600))
 
     def __init__(self, prototxt, model, video, output, confidence, calibration_file, points_color):
         # load our serialized model from disk
@@ -84,8 +102,9 @@ class avatar():
         self.vs.release()
 
     def get_top_view_of_point(self, point):
-        result = np.matmul(self.calibration_file/self.calibration_file[2][2], np.array([point[0], point[1], 0]))
-        print(result)
+        result = np.matmul(
+            self.calibration_file/self.calibration_file[2][2], np.array([point[0], point[1], 0]))
+        # print(result)
         return (int(result[0]), int(result[1]))
 
     def get_top_view(self, frame):
@@ -142,6 +161,8 @@ class avatar():
         points = []
         # grab the next frame from the video file
         (grabbed, frame) = self.vs.read()
+        global shape
+        shape = frame.shape
         intial_width = frame.shape[1]
         # # Create a blank 300x300 black image
         board = np.zeros(
@@ -250,7 +271,8 @@ class avatar():
                             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
                 cv2.circle(frame, (int((startX+endX)/2), endY),
                            10, self.points_color, -1)
-                points.append((int(((startX+endX)/2)*(intial_width/600)), int(endY * (intial_width/600))))
+                points.append(
+                    (int(((startX+endX)/2)*(intial_width/600)), int(endY * (intial_width/600))))
 
         # check to see if we should write the frame to disk
         if self.writer is not None:
@@ -258,18 +280,21 @@ class avatar():
         board = imutils.resize(board, width=intial_width)
         # run one of those examples
         # example 1
-        # board = self.get_top_view(board)
-        # for point in points:
-        #     cv2.circle(board, self.get_top_view_of_point(point), 10, self.points_color, -1)
-        # example 2
-        for point in points:
-            cv2.circle(board, point, 10, self.points_color, -1)
         board = self.get_top_view(board)
-        
+        for point in points:
+            top_view = self.get_top_view_of_point(point)
+            global list_points
+            list_points.append((top_view, self.points_color))
+            cv2.circle(board, top_view, 10, self.points_color, -1)
+        # example 2
+        # for point in points:
+        #     cv2.circle(board, point, 10, self.points_color, -1)
+        # board = self.get_top_view(board)
+
         # show the output frame
         cv2.imshow("Frame(cal)"+str(self.stream_num),
                    imutils.resize(board, width=600))
-        # cv2.imshow("Frame"+str(self.stream_num), frame)
+        cv2.imshow("Frame"+str(self.stream_num), frame)
         key = cv2.waitKey(1) & 0xFF
 
         # if the `q` key was pressed, break from the loop

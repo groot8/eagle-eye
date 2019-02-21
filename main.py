@@ -38,6 +38,7 @@ def main():
     while True:
         for stream in streams:
             stream.forward()
+        avatar.reset_list_points()
 
 
 main()
