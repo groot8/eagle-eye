@@ -165,8 +165,6 @@ class avatar():
         points = []
         # grab the next frame from the video file
         (grabbed, frame) = self.vs.read()
-        global shape
-        shape = frame.shape
         intial_width = frame.shape[1]
         # # Create a blank 300x300 black image
         board = np.zeros(
@@ -285,6 +283,8 @@ class avatar():
         # run one of those examples
         # example 1
         board = self.get_top_view(board)
+        global shape
+        shape = board.shape
         for point in points:
             top_view = self.get_top_view_of_point(point)
             global list_points
