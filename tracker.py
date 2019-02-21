@@ -84,7 +84,9 @@ class avatar():
         self.vs.release()
 
     def get_top_view_of_point(self, point):
-        return self.calibration_file/self.calibration_file[2][2] * [point[0], point[1], 0]
+        result = np.matmul(self.calibration_file/self.calibration_file[2][2], np.array([point[0], point[1], 0]))
+        print(result)
+        return (int(result[0]), int(result[1]))
 
     def get_top_view(self, frame):
         return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (700, 500))
@@ -254,12 +256,20 @@ class avatar():
         if self.writer is not None:
             self.writer.write(frame)
         board = imutils.resize(board, width=intial_width)
+        # run one of those examples
+        # example 1
+        # board = self.get_top_view(board)
+        # for point in points:
+        #     cv2.circle(board, self.get_top_view_of_point(point), 10, self.points_color, -1)
+        # example 2
         for point in points:
             cv2.circle(board, point, 10, self.points_color, -1)
+        board = self.get_top_view(board)
+        
         # show the output frame
         cv2.imshow("Frame(cal)"+str(self.stream_num),
-                   imutils.resize(self.get_top_view(board), width=600))
-        cv2.imshow("Frame"+str(self.stream_num), frame)
+                   imutils.resize(board, width=600))
+        # cv2.imshow("Frame"+str(self.stream_num), frame)
         key = cv2.waitKey(1) & 0xFF
 
         # if the `q` key was pressed, break from the loop
