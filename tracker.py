@@ -102,13 +102,17 @@ class avatar():
         self.vs.release()
 
     def get_top_view_of_point(self, point):
+        # print(point)
         result = np.matmul(
-            self.calibration_file/self.calibration_file[2][2], np.array([point[0], point[1], 0]))
+            self.calibration_file, np.array([point[0], point[1], 1]))
+        # result = cv2.perspectiveTransform(np.array([point[0], point[1], 1]), self.calibration_file/self.calibration_file[2][2])
+        result = (result/result[2])
         # print(result)
         return (int(result[0]), int(result[1]))
 
     def get_top_view(self, frame):
-        return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (700, 500))
+        return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (700, 560))
+        # return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (360, 288))
 
     def detect_people(self, img):
         (h, w) = img.shape[:2]
@@ -286,9 +290,10 @@ class avatar():
             global list_points
             list_points.append((top_view, self.points_color))
             cv2.circle(board, top_view, 10, self.points_color, -1)
+
         # example 2
         # for point in points:
-        #     cv2.circle(board, point, 10, self.points_color, -1)
+        #     cv2.circle(board, point, 1, self.points_color, -1)
         # board = self.get_top_view(board)
 
         # show the output frame
