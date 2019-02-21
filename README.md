@@ -14,4 +14,4 @@ make sure that (env) shown before your username in the terminal
 pip3 install -r requirements.txt
 
 HOW TO RUN:
-python multi_object_tracking_slow.py --prototxt mobilenet_ssd/MobileNetSSD_deploy.prototxt \--model mobilenet_ssd/MobileNetSSD_deploy.caffemodel --video <video> --output <output video>
+python3 main.py --prototxt mobilenet_ssd/MobileNetSSD_deploy.prototxt \--model mobilenet_ssd/MobileNetSSD_deploy.caffemodel -v dataset/campus4-c0.avi,dataset/campus4-c1.avi
