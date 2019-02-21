@@ -84,10 +84,10 @@ class avatar():
         self.vs.release()
 
     def get_top_view_of_point(self, point):
-        return self.calibration_file/self.calibration_file[2][2] * [point[0],point[1],0]
+        return self.calibration_file/self.calibration_file[2][2] * [point[0], point[1], 0]
 
     def get_top_view(self, frame):
-        return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (700,500))
+        return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (700, 500))
 
     def detect_people(self, img):
         (h, w) = img.shape[:2]
@@ -142,10 +142,11 @@ class avatar():
         (grabbed, frame) = self.vs.read()
         intial_width = frame.shape[1]
         # # Create a blank 300x300 black image
-        board = np.zeros((frame.shape[0],frame.shape[1],frame.shape[2]), np.uint8)
+        board = np.zeros(
+            (frame.shape[0], frame.shape[1], frame.shape[2]), np.uint8)
         # # Fill board with red color(set each pixel to red)
         board[:] = (0, 0, 0)
-        # board = frame
+        board = frame
         # increment detection counter and reset trackers if reach max
         current_FPS = self.vs.get(cv2.CAP_PROP_FPS)
         self.detection_counter += 1 / current_FPS
@@ -245,17 +246,19 @@ class avatar():
                               (0, 255, 0), 2)
                 cv2.putText(frame, l, (startX, startY - 15),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
-                cv2.circle(frame,(int((startX+endX)/2),endY), 10, self.points_color, -1)
-                points.append((int((startX+endX)/2),endY))
+                cv2.circle(frame, (int((startX+endX)/2), endY),
+                           10, self.points_color, -1)
+                points.append((int(((startX+endX)/2)*(intial_width/600)), int(endY * (intial_width/600))))
 
         # check to see if we should write the frame to disk
         if self.writer is not None:
             self.writer.write(frame)
-        for point in points:
-            cv2.circle(board,point, 10, self.points_color, -1)
-        # show the output frame
         board = imutils.resize(board, width=intial_width)
-        cv2.imshow("Frame(cal)"+str(self.stream_num), imutils.resize(self.get_top_view(board), width=600))
+        for point in points:
+            cv2.circle(board, point, 10, self.points_color, -1)
+        # show the output frame
+        cv2.imshow("Frame(cal)"+str(self.stream_num),
+                   imutils.resize(self.get_top_view(board), width=600))
         cv2.imshow("Frame"+str(self.stream_num), frame)
         key = cv2.waitKey(1) & 0xFF
 
