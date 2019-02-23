@@ -63,7 +63,7 @@ def make_clusters(list_points):
             if point[2] == i:
                 continue
             point[2] = True
-            target = find_nearst_point(point, list_points, i)
+            target = find_nearst_point(cluster, list_points, i)
             if target is not None:
                 target[3] = True
                 cluster = ((int((cluster[0][0]+target[0][0])/2), int((cluster[0][1]+target[0][1])/2)),(int((cluster[1][0]+target[1][0])/2),int((cluster[1][1]+target[1][1])/2),int((cluster[1][2]+target[1][2])/2)))
