@@ -32,10 +32,49 @@ def intersectionOverUnion(bouns1, bouns2):
     return intersection / (area1 + area2 - intersection)
 
 
+def get_distance(point1, point2):
+    return math.sqrt((point1[0] - point2[0])**2+(point1[1] - point2[1])**2)
+
+def find_nearst_point(point, list_points, stream_num):
+    target = None
+    error = float("inf")
+    for cur_point in list_points:
+        if cur_point[2] != stream_num or cur_point[3]:
+            continue
+        distance = get_distance(point[0], cur_point[0])
+        if distance < error:
+            error = distance
+            target = cur_point
+    global maxError
+    if error <= maxError:
+        return target
+    else:
+        return None
+
+def make_clusters(list_points):
+    clusters = []
+    #last stream index    
+    global stream_num
+    for point in list_points:
+        if point[3]:
+            continue
+        cluster = point
+        for i in range(stream_num + 1):
+            if point[2] == i:
+                continue
+            point[2] = True
+            target = find_nearst_point(point, list_points, i)
+            if target is not None:
+                target[3] = True
+                cluster = ((int((cluster[0][0]+target[0][0])/2), int((cluster[0][1]+target[0][1])/2)),(int((cluster[1][0]+target[1][0])/2),int((cluster[1][1]+target[1][1])/2),int((cluster[1][2]+target[1][2])/2)))
+        clusters.append(cluster)
+    return clusters
+
 shape = (0, 0, 0)
 
+maxError =  100
 list_points = []
-
+clusters = []
 
 class avatar():
     # initialize the list of class labels MobileNet SSD was trained to
@@ -55,8 +94,11 @@ class avatar():
         board[:] = (0, 0, 0)
         global list_points
         print('[list_points]', list_points)
-        for (point, color) in list_points:
-            cv2.circle(board, point, 10, color, -1)
+        for point in list_points:
+            cv2.circle(board, point[0], 10, point[1], -1)
+        clusters = make_clusters(list_points)
+        for cluster in clusters:
+            cv2.circle(board, cluster[0], 15, cluster[1], -1)
         list_points = []
         cv2.imshow("Board",
                    imutils.resize(board, width=600))
@@ -288,7 +330,7 @@ class avatar():
         for point in points:
             top_view = self.get_top_view_of_point(point)
             global list_points
-            list_points.append((top_view, self.points_color))
+            list_points.append([top_view, self.points_color, self.stream_num, False])
             cv2.circle(board, top_view, 10, self.points_color, -1)
 
         # example 2
