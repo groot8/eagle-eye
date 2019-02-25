@@ -98,7 +98,7 @@ class avatar():
         board = np.zeros(shape, np.uint8)
         # # Fill board with red color(set each pixel to red)
         board[:] = (0, 0, 0)
-        global list_pointsvalidate_clusters
+        global list_points
         print('[list_points]', list_points)
         for point in list_points:
             cv2.circle(board, point[0], 10, point[1], -1)
