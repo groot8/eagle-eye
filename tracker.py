@@ -74,7 +74,13 @@ shape = (0, 0, 0)
 
 maxError =  100
 list_points = []
-clusters = []
+ids = []
+
+def validate_clusters(clusters):
+    global ids
+    # # for each cluster find the nearst id and if a match found within a certain threshold
+    # # then update the position of that match with the current cluster position and continue
+    # # if no match found then this is probalby a new id so append the cluster to the ids array
 
 class avatar():
     # initialize the list of class labels MobileNet SSD was trained to
@@ -92,13 +98,14 @@ class avatar():
         board = np.zeros(shape, np.uint8)
         # # Fill board with red color(set each pixel to red)
         board[:] = (0, 0, 0)
-        global list_points
+        global list_pointsvalidate_clusters
         print('[list_points]', list_points)
         for point in list_points:
             cv2.circle(board, point[0], 10, point[1], -1)
         clusters = make_clusters(list_points)
         for cluster in clusters:
             cv2.circle(board, cluster[0], 15, cluster[1], -1)
+        # validate_clusters(clusters)
         list_points = []
         cv2.imshow("Board",
                    imutils.resize(board, width=600))
@@ -166,6 +173,8 @@ class avatar():
     def validate_trackers(self):
         index = 0
         for (t, l) in zip(self.trackers, self.labels):
+            # # here you should use get_top_view_of_point with the point of bottom middle point on box to get position in top view  
+            # # find the nearst id to that view and append that id with the label of this box
             pos = t.get_position()
             # unpack the position object
             startX, startY = int(pos.left()), int(pos.top())
