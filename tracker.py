@@ -35,7 +35,7 @@ def intersectionOverUnion(bouns1, bouns2):
 def get_distance(point1, point2):
     return math.sqrt((point1[0] - point2[0])**2+(point1[1] - point2[1])**2)
 
-def find_nearst_point(point, list_points, stream_num):
+def find_nearst_point_from_spec_stream(point, list_points, stream_num):
     target = None
     error = float("inf")
     for cur_point in list_points:
@@ -47,6 +47,20 @@ def find_nearst_point(point, list_points, stream_num):
             target = cur_point
     global maxError
     if error <= maxError:
+        return target
+    else:
+        return None
+
+def find_nearst_point(point, list_points):
+    target = None
+    error = float("inf")
+    for cur_point in list_points:
+        distance = get_distance(point[0], cur_point[0])
+        if distance < error:
+            error = distance
+            target = cur_point
+    global maxErrorForIds
+    if error <= maxErrorForIds:
         return target
     else:
         return None
@@ -63,7 +77,7 @@ def make_clusters(list_points):
             if point[2] == i:
                 continue
             point[2] = True
-            target = find_nearst_point(cluster, list_points, i)
+            target = find_nearst_point_from_spec_stream(cluster, list_points, i)
             if target is not None:
                 target[3] = True
                 cluster = ((int((cluster[0][0]+target[0][0])/2), int((cluster[0][1]+target[0][1])/2)),(int((cluster[1][0]+target[1][0])/2),int((cluster[1][1]+target[1][1])/2),int((cluster[1][2]+target[1][2])/2)))
@@ -73,14 +87,30 @@ def make_clusters(list_points):
 shape = (0, 0, 0)
 
 maxError =  100
+maxErrorForIds = 300
 list_points = []
 ids = []
+last_id = 0
 
 def validate_clusters(clusters):
     global ids
+    global last_id
+    for id in ids:
+        id[2] -= 1
     # # for each cluster find the nearst id and if a match found within a certain threshold
     # # then update the position of that match with the current cluster position and continue
     # # if no match found then this is probalby a new id so append the cluster to the ids array
+    for cluster in clusters:
+        id = find_nearst_point(cluster, ids)
+        if id is None:
+            last_id += 1
+            ids.append([cluster[0],last_id, 3])
+        else:
+            id[0] = cluster[0]
+            id[2] = 3
+    for id in ids:
+        if(id[2] <= 0):
+            ids.remove(id)
 
 class avatar():
     # initialize the list of class labels MobileNet SSD was trained to
@@ -99,13 +129,16 @@ class avatar():
         # # Fill board with red color(set each pixel to red)
         board[:] = (0, 0, 0)
         global list_points
-        print('[list_points]', list_points)
         for point in list_points:
             cv2.circle(board, point[0], 10, point[1], -1)
         clusters = make_clusters(list_points)
         for cluster in clusters:
             cv2.circle(board, cluster[0], 15, cluster[1], -1)
-        # validate_clusters(clusters)
+        validate_clusters(clusters)
+        # global ids
+        # for id in ids:
+        #     cv2.putText(board, str(id[1]), id[0],
+        #                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 10)
         list_points = []
         cv2.imshow("Board",
                    imutils.resize(board, width=600))
@@ -171,10 +204,12 @@ class avatar():
         return detections
 
     def validate_trackers(self):
+        global ids
+        list_ids = []
+        for id in ids:
+            list_ids.append(id)
         index = 0
         for (t, l) in zip(self.trackers, self.labels):
-            # # here you should use get_top_view_of_point with the point of bottom middle point on box to get position in top view  
-            # # find the nearst id to that view and append that id with the label of this box
             pos = t.get_position()
             # unpack the position object
             startX, startY = int(pos.left()), int(pos.top())
@@ -182,6 +217,14 @@ class avatar():
             if self.search_and_match(index) != -1:
                 self.trackers.remove(t)
                 self.labels.remove(l)
+            # # here you should use get_top_view_of_point with the point of bottom middle point on box to get position in top view  
+            # # find the nearst id to that view and append that id with the label of this box
+            label = "person"
+            point = (int(((startX+endX)/2)*(self.intial_width/600)), int(endY * (self.intial_width/600)))
+            id = find_nearst_point([self.get_top_view_of_point(point)],list_ids)
+            if id is not None:
+                list_ids.remove(id)
+                self.labels[index] = 'person '+ str(id[1])
             index += 1
 
     def search_and_match(self, tracker_index):
@@ -217,6 +260,7 @@ class avatar():
         # grab the next frame from the video file
         (grabbed, frame) = self.vs.read()
         intial_width = frame.shape[1]
+        self.intial_width = intial_width
         # # Create a blank 300x300 black image
         board = np.zeros(
             (frame.shape[0], frame.shape[1], frame.shape[2]), np.uint8)
@@ -251,7 +295,6 @@ class avatar():
         # if there are no object trackers we first need to detect objects
         # and then create a tracker for each object
         if self.detection_counter == 0:
-
             self.trackers = []
             self.labels = []
             detections = self.detect_people(frame)
@@ -270,11 +313,12 @@ class avatar():
                     # extract the index of the class label from the
                     # detections list
                     idx = int(detections[0, 0, i, 1])
-                    label = self.CLASSES[idx] + str(self.id)
 
                     # if the class label is not a person, ignore it
                     if self.CLASSES[idx] != "person":
                         continue
+
+                    
 
                     # compute the (x, y)-coordinates of the bounding box
                     # for the object
@@ -291,6 +335,7 @@ class avatar():
 
                     # update our set of trackers and corresponding class
                     # labels
+                    label = "person"
                     self.labels.append(label)
                     self.trackers.append(t)
 
@@ -348,8 +393,8 @@ class avatar():
         # board = self.get_top_view(board)
 
         # show the output frame
-        cv2.imshow("Frame(cal)"+str(self.stream_num),
-                   imutils.resize(board, width=600))
+        # cv2.imshow("Frame(cal)"+str(self.stream_num),
+        #            imutils.resize(board, width=600))
         cv2.imshow("Frame"+str(self.stream_num), frame)
         key = cv2.waitKey(1) & 0xFF
         if key == ord("s"):
