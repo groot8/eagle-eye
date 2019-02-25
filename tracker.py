@@ -343,7 +343,9 @@ class avatar():
                    imutils.resize(board, width=600))
         cv2.imshow("Frame"+str(self.stream_num), frame)
         key = cv2.waitKey(1) & 0xFF
-
+        if key == ord("s"):
+            while (cv2.waitKey(1) & 0xFF) != ord("s"):
+                pass
         # if the `q` key was pressed, break from the loop
         if key == ord("q"):
             return
