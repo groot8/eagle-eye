@@ -31,14 +31,18 @@ def intersectionOverUnion(bouns1, bouns2):
         return 1
     return intersection / (area1 + area2 - intersection)
 
-
+# point has the form (posX, posY)
 def get_distance(point1, point2):
     return math.sqrt((point1[0] - point2[0])**2+(point1[1] - point2[1])**2)
 
+# point has the form [(posX, posY), (r, g, b), stream_num, flag]
+# this flag if true it indicates that this point has already been clustered so ignore it (True == occupied)
+# however here we use the first 3 elements only
 def find_nearst_point_from_spec_stream(point, list_points, stream_num):
     target = None
     error = float("inf")
     for cur_point in list_points:
+        # if it has different stream num than the required or alredy occupied then continue
         if cur_point[2] != stream_num or cur_point[3]:
             continue
         distance = get_distance(point[0], cur_point[0])
@@ -51,6 +55,8 @@ def find_nearst_point_from_spec_stream(point, list_points, stream_num):
     else:
         return None
 
+# point has the form [(posX, posY), (r, g, b), stream_num, flag]
+# however here we use the first element only
 def find_nearst_point(point, list_points):
     target = None
     error = float("inf")
@@ -65,34 +71,44 @@ def find_nearst_point(point, list_points):
     else:
         return None
 
+# point has the form [(posX, posY), (r, g, b), stream_num, flag]
 def make_clusters(list_points):
     clusters = []
     #last stream index    
-    global stream_num
+    global stream_num #the last stream num found
     for point in list_points:
+        # if point already in a cluster then continue
         if point[3]:
             continue
+        # consider this point a cluster then loop try to find nearst points in other streams
         cluster = point
+        # since we made a cluster of this point we should set flag to true to indicate that it is occupied 
+        point[2] = True
         for i in range(stream_num + 1):
+            # we dont want to find any nearst point in the same stream so we continue if the point has the same stream num
             if point[2] == i:
                 continue
-            point[2] = True
+            # try to find nearst point in stream i
             target = find_nearst_point_from_spec_stream(cluster, list_points, i)
+            # if found then update cluster point to be the intermediate point between org point and the match found
             if target is not None:
+                # set flag in target point to true to indicate that it is occupied
                 target[3] = True
                 cluster = ((int((cluster[0][0]+target[0][0])/2), int((cluster[0][1]+target[0][1])/2)),(int((cluster[1][0]+target[1][0])/2),int((cluster[1][1]+target[1][1])/2),int((cluster[1][2]+target[1][2])/2)))
+        # then append the cluster to the clusters array and continue processing the other points
         clusters.append(cluster)
     return clusters
 
 shape = (0, 0, 0)
 
-maxError =  100
-maxErrorForIds = 300
-list_points = []
-ids = []
+maxError =  100 #max distance between points to form a cluster
+maxErrorForIds = 300 #max distance between old cluster and the new one
+list_points = [] #this would be overwritten after each forward
+ids = [] #this would not be overwirtten but updated
 last_id = 0
 
 def validate_clusters(clusters):
+    # ids has the form of [(posx, posy), id_num, life_time]
     global ids
     global last_id
     for id in ids:
@@ -124,13 +140,14 @@ class avatar():
     detection_interval = 1
 
     def reset_list_points():
-        global shape
+        global shape # has shape of original frame
         board = np.zeros(shape, np.uint8)
-        # # Fill board with red color(set each pixel to red)
         board[:] = (0, 0, 0)
         global list_points
+        # a point has the form of [(posX, posY), (r, g, b), stream_num, flag]
         for point in list_points:
             cv2.circle(board, point[0], 10, point[1], -1)
+        # a cluster has the form of [(posx, posy, (r, g, b))]
         clusters = make_clusters(list_points)
         for cluster in clusters:
             cv2.circle(board, cluster[0], 15, cluster[1], -1)
