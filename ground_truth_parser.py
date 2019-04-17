@@ -48,17 +48,28 @@ def parse(file_name):
                 i = i +1
                 continue
             else:
+                arr = []
                 for j in range(0, int(no_of_people)):
-                    if(el.split()[j] == "-2"):
+                    if(el.split()[j] == "-2" or el.split()[j] == "-1"):
                         continue
                     else:
                         # print("Person number is ", j, " and person pos is ", el.split()[j])
-                        tv_x, tv_y = grid_to_tv( int(el.split()[j]) , grid_width, grid_height, -500, -1500, 7500, 11000)
+                        # tv_x, tv_y = grid_to_tv( int(el.split()[j]) , int(grid_width), int(grid_height), 0, 38.48, 155, 381)
+                        # tv_x, tv_y = grid_to_tv( int(el.split()[j]) , int(grid_width), int(grid_height), -500, -1500, 360, 288)
+                        tv_x, tv_y = grid_to_tv( int(el.split()[j]) , int(grid_width), int(grid_height), 0, 0, 358, 360)
+                        arr.append((int(tv_x), int(tv_y)))
                         # print("In Frame number ", i-1 , " Person number ", j ," has tv_x = ", tv_x, " and tv_y =  ", tv_y )
-                        print("In Frame number " +  str(i-1) + " Person number " + str(j) + " has tv_x = " + str(tv_x) + " and tv_y =  " + str(tv_y) )
-                        f= open("ground_table.txt","a+")
-                        f.write("frame " + str(i-1) + " => " + str(tv_x) + " , " + str(tv_y) + "\n")
-                        f.close()
+                        # print("In Frame number " +  str(i-1) + " Person number " + str(j) + " has tv_x = " + str(tv_x) + " and tv_y =  " + str(tv_y) )
+                    f= open("ground_table.txt","a+")
+                    
+                    st = ""
+                    for a in arr:
+                        st = st + str(a) + ""
+                    # f.write(st + "\n")
+                    f.write(str(i-2) + " [" + st + "] " + "\n")
+                    f.close()
                 i = i +1
 
-parse("dataset/gt_terrace1.txt")
+# parse("dataset/passageway1.txt")
+# parse("dataset/gt_terrace1.txt")
+parse("dataset/gt_lab_6p.txt")

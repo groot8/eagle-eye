@@ -117,14 +117,25 @@ def validate_clusters(clusters):
     # # for each cluster find the nearst id and if a match found within a certain threshold
     # # then update the position of that match with the current cluster position and continue
     # # if no match found then this is probalby a new id so append the cluster to the ids array
-    for cluster in clusters:
+    conterato = 0
+    clusters = clusters.copy()
+    while len(clusters) > 0:
+
+        conterato = conterato + 1
+        if(conterato>200 ):
+            break
+        cluster = clusters[0]
         id = find_nearst_point(cluster, ids, maxErrorForIds)
         if id is None:
             last_id += 1
             ids.append([cluster[0],last_id, 3])
+            clusters.remove(cluster)
         else:
+            if(find_nearst_point(id, clusters, maxErrorForIds) != cluster):
+                continue
             id[0] = cluster[0]
             id[2] = 3
+            clusters.remove(cluster)
     for id in ids:
         if(id[2] <= 0):
             ids.remove(id)
