@@ -9,9 +9,10 @@ import imutils
 import dlib
 import cv2
 import math
-
+from  yolo3.test import *
 stream_num = 0
-
+frame_num = 0
+d_ps = []
 
 def intersectionOverUnion(bouns1, bouns2):
     (startX, startY, endX, endY) = (
@@ -57,7 +58,7 @@ def find_nearst_point_from_spec_stream(point, list_points, stream_num):
 
 # point has the form [(posX, posY), (r, g, b), stream_num, flag]
 # however here we use the first element only
-def find_nearst_point(point, list_points):
+def find_nearst_point(point, list_points, maxError):
     target = None
     error = float("inf")
     for cur_point in list_points:
@@ -65,8 +66,7 @@ def find_nearst_point(point, list_points):
         if distance < error:
             error = distance
             target = cur_point
-    global maxErrorForIds
-    if error <= maxErrorForIds:
+    if error <= maxError:
         return target
     else:
         return None
@@ -102,7 +102,8 @@ def make_clusters(list_points):
 shape = (0, 0, 0)
 
 maxError =  100 #max distance between points to form a cluster
-maxErrorForIds = 300 #max distance between old cluster and the new one
+maxErrorForBoxToGetId = 20 #max distance between points to form a cluster
+maxErrorForIds = 40 #max distance between old cluster and the new one
 list_points = [] #this would be overwritten after each forward
 ids = [] #this would not be overwirtten but updated
 last_id = 0
@@ -117,7 +118,7 @@ def validate_clusters(clusters):
     # # then update the position of that match with the current cluster position and continue
     # # if no match found then this is probalby a new id so append the cluster to the ids array
     for cluster in clusters:
-        id = find_nearst_point(cluster, ids)
+        id = find_nearst_point(cluster, ids, maxErrorForIds)
         if id is None:
             last_id += 1
             ids.append([cluster[0],last_id, 3])
@@ -149,8 +150,18 @@ class avatar():
             cv2.circle(board, point[0], 10, point[1], -1)
         # a cluster has the form of [(posx, posy, (r, g, b))]
         clusters = make_clusters(list_points)
+        global frame_num
+        frame_num += 1
+        data = []
         for cluster in clusters:
+            data.append(cluster[0])
             cv2.circle(board, cluster[0], 15, cluster[1], -1)
+        if frame_num % 25 == 0:
+            print(frame_num,data)    
+            f= open("outputtxt.txt","a+")
+            f.write(str(frame_num) + " " + str(data) + "\n")
+            f.close()
+            # d_ps.append(data)
         validate_clusters(clusters)
         # global ids
         # for id in ids:
@@ -160,17 +171,17 @@ class avatar():
         cv2.imshow("Board",
                    imutils.resize(board, width=600))
 
-    def __init__(self, prototxt, model, video, output, confidence, calibration_file, points_color):
+    def __init__(self, video, output, calibration_file, points_color):
         # load our serialized model from disk
         # print("[INFO] loading model...")
-        self.net = cv2.dnn.readNetFromCaffe(prototxt, model)
+        # self.net = cv2.dnn.readNetFromCaffe(prototxt, model)
         # initialize the video stream and output video writer
         # print("[INFO] starting video stream...")
         self.vs = cv2.VideoCapture(video)
         # start the frames per second throughput estimator
         self.fps = FPS().start()
         self.output = output
-        self.confidence = confidence
+        # self.confidence = confidence
         global stream_num
         stream_num += 1
         self.stream_num = stream_num
@@ -214,10 +225,11 @@ class avatar():
         # return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (360, 288))
 
     def detect_people(self, img):
-        (h, w) = img.shape[:2]
-        blob = cv2.dnn.blobFromImage(img, 0.007843, (w, h), 127.5)
-        self.net.setInput(blob)
-        detections = self.net.forward()
+        detections = detect(img)
+        # (h, w) = img.shape[:2]
+        # blob = cv2.dnn.blobFromImage(img, 0.007843, (w, h), 127.5)
+        # self.net.setInput(blob)
+        # detections = self.net.forward()
         return detections
 
     def validate_trackers(self):
@@ -234,11 +246,12 @@ class avatar():
             if self.search_and_match(index) != -1:
                 self.trackers.remove(t)
                 self.labels.remove(l)
+                continue
             # # here you should use get_top_view_of_point with the point of bottom middle point on box to get position in top view  
             # # find the nearst id to that view and append that id with the label of this box
             label = "person"
             point = (int(((startX+endX)/2)*(self.intial_width/600)), int(endY * (self.intial_width/600)))
-            id = find_nearst_point([self.get_top_view_of_point(point)],list_ids)
+            id = find_nearst_point([self.get_top_view_of_point(point)],list_ids, 200)
             if id is not None:
                 list_ids.remove(id)
                 self.labels[index] = 'person '+ str(id[1])
@@ -318,30 +331,30 @@ class avatar():
 
             # loop over the detections
             (h, w) = frame.shape[:2]
-            for i in np.arange(0, detections.shape[2]):
+            for i in np.arange(0, len(detections[0])):
                 # extract the confidence (i.e., probability) associated
                 # with the prediction
-                confidence = detections[0, 0, i, 2]
+                confidence = detections[0][i]
 
                 # filter out weak detections by requiring a minimum
                 # confidence
-                if confidence > self.confidence:
+                if True:
                     #print("===",confidence)
                     # extract the index of the class label from the
                     # detections list
-                    idx = int(detections[0, 0, i, 1])
+                    # idx = int(detections[0, 0, i, 1])
 
                     # if the class label is not a person, ignore it
-                    if self.CLASSES[idx] != "person":
-                        continue
+                    # if self.CLASSES[idx] != "person":
+                        # continue
 
                     
 
                     # compute the (x, y)-coordinates of the bounding box
                     # for the object
-                    box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-                    (startX, startY, endX, endY) = box.astype("int")
-
+                    xx,yy,ww,hh = detections[1][i]#, 0, i, 3:7] * np.array([w, h, w, h])
+                    (startX, startY, endX, endY) = int(xx), int(yy), int(xx+ww), int(yy+hh) 
+                    #box.astype("int")
                     # if box match another one in range x continue
                     # center = (startX + (endX - startX) / 2, startY + (endY - startY) / 2)
                     # construct a dlib rectangle object from the bounding
@@ -364,7 +377,23 @@ class avatar():
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
 
             self.validate_trackers()
-
+            # loop over each of the self.trackers
+            for (t, l) in zip(self.trackers, self.labels):
+                #print(str(t))
+                pos = t.get_position()
+                # unpack the position object
+                startX, startY = int(pos.left()), int(pos.top())
+                endX, endY = int(pos.right()), int(pos.bottom())
+                # draw the bounding box from the correlation object tracker
+                # if confidencex >= 0.5:
+                cv2.rectangle(frame, (startX, startY), (endX, endY),
+                              (0, 255, 0), 2)
+                cv2.putText(frame, l, (startX, startY - 15),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
+                cv2.circle(frame, (int((startX+endX)/2), endY),
+                           10, self.points_color, -1)
+                points.append(
+                    (int(((startX+endX)/2)*(intial_width/600)), int(endY * (intial_width/600))))
         # otherwise, we've already performed detection so let's track
         # multiple objects
         else:
@@ -420,6 +449,5 @@ class avatar():
         # if the `q` key was pressed, break from the loop
         if key == ord("q"):
             return
-
         # update the FPS counter
         self.fps.update()

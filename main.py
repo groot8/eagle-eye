@@ -1,48 +1,61 @@
 import argparse
-from tracker import avatar
+from tracker import avatar,d_ps
 import numpy as np
 
 calibration_files = [
-    np.array([[-0.211332, -0.405226, 70.781223], [-0.019746, -
-                                                  1.564936, 226.377280], [-0.000025, -0.001961, 0.160791]]),
-    np.array([[0.000745, 0.350335, -98.376103], [-0.164871, -
-                                                 0.390422, 54.081423], [0.000021, -0.001668, 0.111075]]),
-    np.array([[00.089976, 1.066795, -152.055667], [-0.116343, 
-                                                 0.861342, -75.122116], [0.000015, 0.001442, -0.064065]])
-
+    np.array([[-1.6688907435,-6.9502305710,	940.69592392565],[1.1984806153,	-10.7495778320,	868.29873467315],[0.0004069210,	-0.0209324057,	0.42949125235]]),
+    np.array([[0.6174778372,	-0.4836875683,	147.00510919005],[0.5798503075,	3.8204849039,	-386.096405131],[0.0000000001,	0.0077222239,	-0.01593391935]]),
+    np.array([[-0.2717592338,1.0286363982,-17.6643219215],[-0.1373600672,-0.3326731339,161.0109069274],[0.0000600052,0.0030858398,-0.04195162855]]),
+    np.array([[-0.3286861858,0.1142963200,130.25528281945],[0.1809954834,-0.2059386455,125.0260427323],[0.0000693641,0.0040168154,-0.08284534995]])
 ]
+
+# pos => from ground truth file
+# 40, 99 => grid_width, drid_height
+# 0, 38.48 => tv_origin_x, tv_origin_y
+# 155, 381 => tv_width, tv_height
+def grid_to_tv(pos, grid_width, grid_height, tv_origin_x, tv_origin_y, tv_width, tv_height):     
+    tv_x = ( (pos % grid_width) + 0.5 ) * (tv_width / grid_width) + tv_origin_x
+    tv_y = ( (pos / grid_width) + 0.5 ) * (tv_height / grid_height) + tv_origin_y
+    return (tv_x, tv_y)
 
 points_colors = [
     (0,0,255),
     (0,255,255),
     (255,255,255),
+    (100,100,100)
 ]
 
 
 def main():
     # construct the argument parser and parse the arguments
-    ap = argparse.ArgumentParser()
-    ap.add_argument("-p", "--prototxt", required=True,
-                    help="path to Caffe 'deploy' prototxt file")
-    ap.add_argument("-m", "--model", required=True,
-                    help="path to Caffe pre-trained model")
-    ap.add_argument("-v", "--video", required=True,
-                    help="path to input video file")
-    ap.add_argument("-c", "--confidence", type=float, default=0.2,
-                    help="minimum probability to filter weak detections")
-    args = vars(ap.parse_args())
-
+    # ap = argparse.ArgumentParser()
+    # ap.add_argument("-p", "--prototxt", required=True,
+                    # help="path to Caffe 'deploy' prototxt file")
+    # ap.add_argument("-m", "--model", required=True,
+                    # help="path to Caffe pre-trained model")
+    # ap.add_argument("-v", "--video", required=True,
+                    # help="path to input video file")
+    # ap.add_argument("-c", "--confidence", type=float, default=0.2,
+                    # help="minimum probability to filter weak detections")
+    # args = vars(ap.parse_args())
+    # args = {'video':'../GP_Data/terrace1-c0.avi,../GP_Data/terrace1-c1.avi'}
+    args = {'video':'dataset/terrace1-c0.avi,dataset/terrace1-c1.avi,dataset/terrace1-c2.avi,dataset/terrace1-c3.avi'}
     streams = []
 
     for (src, calibration_file, points_color) in zip(args['video'].split(','), calibration_files, points_colors):
-        print(src)
-        streams.append(avatar(args['prototxt'], args['model'],
-                              src, None, args['confidence'], calibration_file, points_color))
+        print(calibration_file, points_color)
+        streams.append(avatar(src, None, calibration_file, points_color))
 
+    
+    f= open("outputtxt.txt","w+")
+    f.close()
+    
     while True:
         for stream in streams:
             stream.forward()
         avatar.reset_list_points()
+    
+    print(d_ps)
 
 
 main()

@@ -1,0 +1,1 @@
+python3 main.py --prototxt mobilenet_ssd/MobileNetSSD_deploy.prototxt \--model mobilenet_ssd/MobileNetSSD_deploy.caffemodel -v dataset/campus4-c0.avi,dataset/campus4-c1.avi
