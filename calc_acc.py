@@ -54,7 +54,11 @@ cal_ground_truth_list = cal_ground_truth_file.read().split('\n')
 num_iterations = len(cal_ground_truth_list)
 
 def get_list(line):
-    return eval(re.split(r'[0-9]+ +', line)[1])
+    res = []
+    arr = re.findall('([0-9]+, [0-9]+)',re.split(r'[0-9]+ +', line)[1])
+    for p in arr:
+        res.append(eval('('+p+')'))
+    return res
 
 # t_ps points from ground truth file [points], point => [(posX,posY), ...]
 t_ps = list(map(get_list, opt_ground_truth_list[0:num_iterations]))
