@@ -14,6 +14,10 @@ stream_num = 0
 frame_num = 0
 d_ps = []
 
+def set_ground_truth_file_path(path):
+    global ground_truth_file_path
+    ground_truth_file_path = path
+
 def intersectionOverUnion(bouns1, bouns2):
     (startX, startY, endX, endY) = (
         max(bouns1[0], bouns2[0]),
@@ -162,14 +166,15 @@ class avatar():
         # a cluster has the form of [(posx, posy, (r, g, b))]
         clusters = make_clusters(list_points)
         global frame_num
+        print("#Frame : " + str(frame_num))
         frame_num += 1
         data = []
         for cluster in clusters:
             data.append(cluster[0])
             cv2.circle(board, cluster[0], 15, cluster[1], -1)
         if frame_num % 25 == 0:
-            print(frame_num,data)    
-            f= open("outputtxt.txt","a+")
+            global ground_truth_file_path
+            f= open(ground_truth_file_path,"a+")
             f.write(str(frame_num) + " " + str(data) + "\n")
             f.close()
             # d_ps.append(data)

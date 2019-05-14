@@ -15,3 +15,8 @@ pip3 install -r requirements.txt
 
 HOW TO RUN:
 python3 main.py --prototxt mobilenet_ssd/MobileNetSSD_deploy.prototxt \--model mobilenet_ssd/MobileNetSSD_deploy.caffemodel -v dataset/campus4-c0.avi,dataset/campus4-c1.avi
+
+HOW TO CALC ACC:
+- run python3 main.py
+- run python3 ground_truth_parser.py
+- run python3 calc_acc.py

@@ -29,7 +29,7 @@ def parse(file_name):
     first_frame = 0
     last_frame = 0
 
-    f= open("ground_table.txt","w+")
+    f= open("output/opt_ground_truth_list.txt","w+")
     f.close()
     for el in arr:
         if(i == 0):
@@ -60,7 +60,7 @@ def parse(file_name):
                         arr.append((int(tv_x), int(tv_y)))
                         # print("In Frame number ", i-1 , " Person number ", j ," has tv_x = ", tv_x, " and tv_y =  ", tv_y )
                         # print("In Frame number " +  str(i-1) + " Person number " + str(j) + " has tv_x = " + str(tv_x) + " and tv_y =  " + str(tv_y) )
-                    f= open("ground_table.txt","a+")
+                    f= open("output/opt_ground_truth_list.txt","a+")
                     
                     st = ""
                     for a in arr:

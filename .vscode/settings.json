@@ -1,4 +1,5 @@
 {
     "python.pythonPath": "env/bin/python2",
-    "python.linting.pylintEnabled": false
+    "python.linting.pylintEnabled": false,
+    "python.formatting.provider": "black"
 }

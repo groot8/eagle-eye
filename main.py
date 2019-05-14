@@ -1,5 +1,5 @@
 import argparse
-from tracker import avatar,d_ps
+from tracker import avatar,d_ps,set_ground_truth_file_path
 import numpy as np
 
 # calibration_files = [
@@ -33,6 +33,7 @@ points_colors = [
     (100,100,100)
 ]
 
+ground_truth_file_path = 'output/cal_ground_truth_list.txt'
 
 def main():
     # construct the argument parser and parse the arguments
@@ -53,15 +54,16 @@ def main():
     for (src, calibration_file, points_color) in zip(args['video'].split(','), calibration_files, points_colors):
         streams.append(avatar(src, None, calibration_file, points_color))
     
-    f= open("outputtxt.txt","w+")
+    f= open(ground_truth_file_path,"w+")
     f.close()
-    
+    set_ground_truth_file_path(ground_truth_file_path)
+
     while True:
         for stream in streams:
             stream.forward()
         avatar.reset_list_points()
     
-    print(d_ps)
+    # print(d_ps)
 
 
 main()

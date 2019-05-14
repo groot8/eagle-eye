@@ -1,5 +1,7 @@
 env
 __pychache__
 *.pyc
-.vscode
-dataset
+.vscode/
+dataset/
+output/
+yolo3/
