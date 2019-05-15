@@ -35,7 +35,9 @@ points_colors = [
 
 ground_truth_file_path = 'output/cal_ground_truth_list.txt'
 
-def main():
+streams = []
+
+def main(imshow):
     # construct the argument parser and parse the arguments
     # ap = argparse.ArgumentParser()
     # ap.add_argument("-p", "--prototxt", required=True,
@@ -49,10 +51,9 @@ def main():
     # args = vars(ap.parse_args())
     # args = {'video':'../GP_Data/terrace1-c0.avi,../GP_Data/terrace1-c1.avi'}
     args = {'video':'dataset/6p-c0.avi,dataset/6p-c1.avi,dataset/6p-c2.avi,dataset/6p-c3.avi'}
-    streams = []
 
     for (src, calibration_file, points_color) in zip(args['video'].split(','), calibration_files, points_colors):
-        streams.append(avatar(src, None, calibration_file, points_color))
+        streams.append(avatar(src, False, imshow, calibration_file, points_color))
     
     f= open(ground_truth_file_path,"w+")
     f.close()
@@ -61,40 +62,40 @@ def main():
     while True:
         for stream in streams:
             stream.forward()
-        avatar.reset_list_points()
+        avatar.reset_list_points(imshow)
     
     # print(d_ps)
 
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, request
 import cv2
 from time import time, sleep
 
 app = Flask(__name__)
 
 
-def gen():
-    cap = cv2.VideoCapture('output/1.avi')
+def gen(si):
     while True:
         # Capture frame-by-frame
         try:
-            ret, frame = cap.read()
-            yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + cv2.imencode('.jpg', frame)[1].tostring() + b'\r\n')
+            yield streams[si].getFrame()
         except:
             sleep(1)
-            print("This is an error message!")
+            print("[stream#"+si+"]pause")
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/run')
+def run():
+    main(eval(request.args.get('imshow')))
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen(),
+    return Response(gen(int(request.args.get('si'))),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
-    main()
-    # app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0', debug=True)
 
 

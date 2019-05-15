@@ -155,7 +155,7 @@ class avatar():
     maxintersectionOverUnion = 0.2
     detection_interval = 1
 
-    def reset_list_points():
+    def reset_list_points(imshow):
         global shape # has shape of original frame
         board = np.zeros(shape, np.uint8)
         board[:] = (0, 0, 0)
@@ -184,10 +184,15 @@ class avatar():
         #     cv2.putText(board, str(id[1]), id[0],
         #                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 10)
         list_points = []
-        cv2.imshow("Board",
-                   imutils.resize(board, width=600))
+        if imshow:
+            cv2.imshow("Board",
+                    imutils.resize(board, width=600))
 
-    def __init__(self, video, output, calibration_file, points_color):
+    def getFrame(self):
+        return self.frames.pop()
+
+    def __init__(self, video, save_output, imshow, calibration_file, points_color):
+        self.frames = []
         # load our serialized model from disk
         # print("[INFO] loading model...")
         # self.net = cv2.dnn.readNetFromCaffe(prototxt, model)
@@ -196,7 +201,7 @@ class avatar():
         self.vs = cv2.VideoCapture(video)
         # start the frames per second throughput estimator
         self.fps = FPS().start()
-        self.output = output
+        self.save_output = save_output
         # self.confidence = confidence
         global stream_num
         stream_num += 1
@@ -213,6 +218,8 @@ class avatar():
         self.writer = None
         self.calibration_file = calibration_file
         self.points_color = points_color
+        # flag to diplay cv2 imshow windoes or not
+        self.imshow = imshow
 
     def __del__(self):
         # stop the timer and display FPS information
@@ -334,7 +341,7 @@ class avatar():
 
         # if we are supposed to be writing a video to disk, initialize
         # the writer
-        if self.writer is None:
+        if self.writer is None and self.save_output:
             fourcc = cv2.VideoWriter_fourcc(*"MJPG")
             self.writer = cv2.VideoWriter('output/'+str(self.stream_num)+'.avi', fourcc, 30,
                                           (frame.shape[1], frame.shape[0]), True)
@@ -449,7 +456,7 @@ class avatar():
             global list_points
             list_points.append([top_view, self.points_color, self.stream_num, False])
             cv2.circle(board, top_view, 10, self.points_color, -1)
-
+        
         # example 2
         # for point in points:
         #     cv2.circle(board, point, 1, self.points_color, -1)
@@ -458,7 +465,10 @@ class avatar():
         # show the output frame
         # cv2.imshow("Frame(cal)"+str(self.stream_num),
         #            imutils.resize(board, width=600))
-        # cv2.imshow("Frame"+str(self.stream_num), frame)
+        if self.imshow:
+            cv2.imshow("Frame"+str(self.stream_num), frame)
+        self.frames.append((b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + cv2.imencode('.jpg', frame)[1].tostring() + b'\r\n'))
         key = cv2.waitKey(1) & 0xFF
         if key == ord("s"):
             while (cv2.waitKey(1) & 0xFF) != ord("s"):
