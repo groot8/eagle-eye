@@ -316,6 +316,7 @@ class avatar():
         # increment detection counter and reset trackers if reach max
         current_FPS = self.vs.get(cv2.CAP_PROP_FPS)
         self.detection_counter += 1 / current_FPS
+
         # print(self.detection_counter)
         if self.detection_counter >= self.detection_interval:
             self.detection_counter = 0
@@ -333,9 +334,9 @@ class avatar():
 
         # if we are supposed to be writing a video to disk, initialize
         # the writer
-        if self.output is not None and self.writer is None:
+        if self.writer is None:
             fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-            self.writer = cv2.VideoWriter(self.output, fourcc, 30,
+            self.writer = cv2.VideoWriter('output/'+str(self.stream_num)+'.avi', fourcc, 30,
                                           (frame.shape[1], frame.shape[0]), True)
 
         # if there are no object trackers we first need to detect objects
@@ -457,7 +458,7 @@ class avatar():
         # show the output frame
         # cv2.imshow("Frame(cal)"+str(self.stream_num),
         #            imutils.resize(board, width=600))
-        cv2.imshow("Frame"+str(self.stream_num), frame)
+        # cv2.imshow("Frame"+str(self.stream_num), frame)
         key = cv2.waitKey(1) & 0xFF
         if key == ord("s"):
             while (cv2.waitKey(1) & 0xFF) != ord("s"):
