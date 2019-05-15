@@ -14,7 +14,9 @@ make sure that (env) shown before your username in the terminal
 pip3 install -r requirements.txt
 
 HOW TO RUN:
-python3 main.py --prototxt mobilenet_ssd/MobileNetSSD_deploy.prototxt \--model mobilenet_ssd/MobileNetSSD_deploy.caffemodel -v dataset/campus4-c0.avi,dataset/campus4-c1.avi
+python3 main.py 
+open /run?imshow=false
+open /
 
 HOW TO CALC ACC:
 - run python3 main.py
