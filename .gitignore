@@ -5,3 +5,7 @@ __pychache__
 dataset/
 output/
 yolo3/
+yolo3keras/
+font/
+mobilenet_ssd/
+model_data/

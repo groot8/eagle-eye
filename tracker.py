@@ -10,6 +10,7 @@ import dlib
 import cv2
 import math
 from  yolo3.test import *
+from yolo3keras.yolomain import *
 stream_num = 0
 frame_num = 0
 d_ps = []
@@ -241,7 +242,8 @@ class avatar():
         # return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (360, 288))
 
     def detect_people(self, img):
-        detections = detect(img)
+        detections = detect(img)          # darknet yolo3
+        # detections = yoloo.detect(img)      # keras yolo3
         # (h, w) = img.shape[:2]
         # blob = cv2.dnn.blobFromImage(img, 0.007843, (w, h), 127.5)
         # self.net.setInput(blob)
