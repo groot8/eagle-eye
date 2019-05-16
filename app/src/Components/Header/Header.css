@@ -1,0 +1,11 @@
+.header{
+    background-color: #21aa93;
+    grid-column: 1/-1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 4rem;
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+
+}

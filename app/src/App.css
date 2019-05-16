@@ -1,0 +1,31 @@
+*,
+*::after,
+*::before {
+    margin: 0;
+    padding: 0;
+    box-sizing: inherit;
+}
+
+html {
+    
+    font-size: 62.5%; 
+
+
+}
+
+body {
+    box-sizing: border-box;
+    padding: 3rem;
+
+    background-color: rgba(244, 247, 245, 0.979);
+
+
+}
+
+.App{
+    display: grid;
+    grid-template-columns:repeat(4,1fr);
+    grid-template-rows: 10rem  100rem;
+    box-shadow: 4px 4px 10px rgb(202, 201, 201);
+    background-color: rgba(244, 247, 245, 0.979);
+}
