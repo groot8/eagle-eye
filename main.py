@@ -1,5 +1,5 @@
 import argparse
-from tracker import avatar,d_ps,set_ground_truth_file_path
+from tracker import avatar,d_ps,set_ground_truth_file_path, showId, hideId, getIds
 import numpy as np
 
 # calibration_files = [
@@ -66,7 +66,7 @@ def main(imshow):
     
     # print(d_ps)
 
-from flask import Flask, render_template, Response, request
+from flask import Flask, render_template, Response, request, jsonify
 import cv2
 from time import time, sleep
 
@@ -86,9 +86,24 @@ def gen(si):
 def index():
     return render_template('index.html')
 
+@app.route('/ids')
+def listIds():
+    return jsonify(getIds())
+
+@app.route('/ids/show')
+def show():
+    showId(int(request.args.get('id')))
+    return '', 204
+
+@app.route('/ids/hide')
+def hide():
+    hideId(int(request.args.get('id')))
+    return '', 204
+
 @app.route('/run')
 def run():
     main(eval(request.args.get('imshow')))
+    return '', 204
 
 @app.route('/video_feed')
 def video_feed():

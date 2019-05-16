@@ -5,3 +5,6 @@ __pychache__
 dataset/
 output/
 yolo3/
+font/
+model_data/
+yolo3keras/

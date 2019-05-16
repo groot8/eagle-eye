@@ -113,7 +113,7 @@ ids = [] #this would not be overwirtten but updated
 last_id = 0
 
 def validate_clusters(clusters):
-    # ids has the form of [(posx, posy), id_num, life_time]
+    # ids has the form of [(posx, posy), id_num, life_time, hide]
     global ids
     global last_id
     for id in ids:
@@ -132,7 +132,7 @@ def validate_clusters(clusters):
         id = find_nearst_point(cluster, ids, maxErrorForIds)
         if id is None:
             last_id += 1
-            ids.append([cluster[0],last_id, 3])
+            ids.append([cluster[0],last_id, 3, False])
             clusters.remove(cluster)
         else:
             if(find_nearst_point(id, clusters, maxErrorForIds) != cluster):
@@ -143,6 +143,25 @@ def validate_clusters(clusters):
     for id in ids:
         if(id[2] <= 0):
             ids.remove(id)
+
+def showId(i):
+    global ids
+    for id in ids:
+        if id[1] == i:
+            id[3] = False
+            
+def hideId(i):
+    global ids
+    for id in ids:
+        if id[1] == i:
+            id[3] = True
+
+def getIds():
+    global ids
+    res = []
+    for id in ids:
+        res.append([id[1],id[3]])
+    return res
 
 class avatar():
     # initialize the list of class labels MobileNet SSD was trained to
@@ -277,7 +296,10 @@ class avatar():
             id = find_nearst_point([self.get_top_view_of_point(point)],list_ids, 200)
             if id is not None:
                 list_ids.remove(id)
-                self.labels[index] = 'person '+ str(id[1])
+                if id[3]:
+                    self.labels[index] = ""
+                else:
+                    self.labels[index] = 'person '+ str(id[1])
             index += 1
 
     def search_and_match(self, tracker_index):
@@ -393,13 +415,6 @@ class avatar():
                     self.labels.append(label)
                     self.trackers.append(t)
 
-                    # grab the corresponding class label for the detection
-                    # and draw the bounding box
-                    cv2.rectangle(frame, (startX, startY), (endX, endY),
-                                  (0, 255, 0), 2)
-                    cv2.putText(frame, label, (startX, startY - 15),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
-
             self.validate_trackers()
             # loop over each of the self.trackers
             for (t, l) in zip(self.trackers, self.labels):
@@ -408,14 +423,29 @@ class avatar():
                 # unpack the position object
                 startX, startY = int(pos.left()), int(pos.top())
                 endX, endY = int(pos.right()), int(pos.bottom())
-                # draw the bounding box from the correlation object tracker
-                # if confidencex >= 0.5:
-                cv2.rectangle(frame, (startX, startY), (endX, endY),
+                if l == "":
+                    try:
+                        sub_face = frame[startY:endY, startX:endX]
+                        # Get input size
+                        width, height, _ = sub_face.shape
+                        # Desired "pixelated" size
+                        w, h = (16, 16)
+                        # Resize input to "pixelated" size
+                        sub_face = cv2.resize(sub_face, (w, h), interpolation=cv2.INTER_LINEAR)
+                        # Initialize output image
+                        sub_face = cv2.resize(sub_face, (height, width), interpolation=cv2.INTER_NEAREST)
+                        frame[startY:endY, startX:endX] = sub_face
+                    except:
+                        pass
+                else:
+                    # draw the bounding box from the correlation object tracker
+                    # if confidencex >= 0.5:
+                    cv2.rectangle(frame, (startX, startY), (endX, endY),
                               (0, 255, 0), 2)
-                cv2.putText(frame, l, (startX, startY - 15),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
-                cv2.circle(frame, (int((startX+endX)/2), endY),
-                           10, self.points_color, -1)
+                    cv2.putText(frame, l, (startX, startY - 15),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
+                    cv2.circle(frame, (int((startX+endX)/2), endY),
+                            5, self.points_color, -1)
                 points.append(
                     (int(((startX+endX)/2)*(intial_width/600)), int(endY * (intial_width/600))))
         # otherwise, we've already performed detection so let's track
@@ -431,14 +461,29 @@ class avatar():
                 # unpack the position object
                 startX, startY = int(pos.left()), int(pos.top())
                 endX, endY = int(pos.right()), int(pos.bottom())
-                # draw the bounding box from the correlation object tracker
-                # if confidencex >= 0.5:
-                cv2.rectangle(frame, (startX, startY), (endX, endY),
-                              (0, 255, 0), 2)
-                cv2.putText(frame, l, (startX, startY - 15),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
-                cv2.circle(frame, (int((startX+endX)/2), endY),
-                           10, self.points_color, -1)
+                if l == "":
+                    try:
+                        sub_face = frame[startY:endY, startX:endX]
+                        # Get input size
+                        width, height, _ = sub_face.shape
+                        # Desired "pixelated" size
+                        w, h = (16, 16)
+                        # Resize input to "pixelated" size
+                        sub_face = cv2.resize(sub_face, (w, h), interpolation=cv2.INTER_LINEAR)
+                        # Initialize output image
+                        sub_face = cv2.resize(sub_face, (height, width), interpolation=cv2.INTER_NEAREST)
+                        frame[startY:endY, startX:endX] = sub_face
+                    except:
+                        pass
+                else:
+                    # draw the bounding box from the correlation object tracker
+                    # if confidencex >= 0.5:
+                    cv2.rectangle(frame, (startX, startY), (endX, endY),
+                                (0, 255, 0), 2)
+                    cv2.putText(frame, l, (startX, startY - 15),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
+                    cv2.circle(frame, (int((startX+endX)/2), endY),
+                            5, self.points_color, -1)
                 points.append(
                     (int(((startX+endX)/2)*(intial_width/600)), int(endY * (intial_width/600))))
 
@@ -455,7 +500,7 @@ class avatar():
             top_view = self.get_top_view_of_point(point)
             global list_points
             list_points.append([top_view, self.points_color, self.stream_num, False])
-            cv2.circle(board, top_view, 10, self.points_color, -1)
+            cv2.circle(board, top_view, 5, self.points_color, -1)
         
         # example 2
         # for point in points:
