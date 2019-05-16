@@ -25,7 +25,7 @@ import Controllers from './Controllers';
           <Stream src ={this.state.srcs[1]}  class = 'stream' />
           <Stream src ={this.state.srcs[2]}  class = 'stream' />
           <Stream src ={this.state.srcs[3]}  class = 'stream' />
-          {/* <Controllers class='controller' /> */}
+          <Controllers class='controller' />
 
         </div>
         {/* <Map src ={require('../../images/map.jpeg')} class = 'map'/> */}
