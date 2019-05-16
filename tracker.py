@@ -10,6 +10,7 @@ import dlib
 import cv2
 import math
 from  yolo3.test import *
+from time import sleep
 stream_num = 0
 frame_num = 0
 d_ps = []
@@ -111,6 +112,12 @@ maxErrorForIds = 40 #max distance between old cluster and the new one
 list_points = [] #this would be overwritten after each forward
 ids = [] #this would not be overwirtten but updated
 last_id = 0
+
+pause = False
+
+def togglePause():
+    global pause
+    pause = not pause
 
 def validate_clusters(clusters):
     # ids has the form of [(posx, posy), id_num, life_time, hide]
@@ -331,6 +338,10 @@ class avatar():
             return -1
 
     def forward(self):
+        global pause
+        if pause:
+            sleep(0.5)
+            return 
         points = []
         # grab the next frame from the video file
         (grabbed, frame) = self.vs.read()
@@ -512,14 +523,14 @@ class avatar():
         #            imutils.resize(board, width=600))
         if self.imshow:
             cv2.imshow("Frame"+str(self.stream_num), frame)
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("s"):
+                while (cv2.waitKey(1) & 0xFF) != ord("s"):
+                    pass
+            # if the `q` key was pressed, break from the loop
+            if key == ord("q"):
+                return
         self.frames.append((b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + cv2.imencode('.jpg', frame)[1].tostring() + b'\r\n'))
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("s"):
-            while (cv2.waitKey(1) & 0xFF) != ord("s"):
-                pass
-        # if the `q` key was pressed, break from the loop
-        if key == ord("q"):
-            return
         # update the FPS counter
         self.fps.update()

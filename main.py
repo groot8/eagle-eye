@@ -1,5 +1,5 @@
 import argparse
-from tracker import avatar,d_ps,set_ground_truth_file_path, showId, hideId, getIds
+from tracker import avatar,d_ps,set_ground_truth_file_path, showId, hideId, getIds, togglePause
 import numpy as np
 
 # calibration_files = [
@@ -85,6 +85,11 @@ def gen(si):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/toggle-pause')
+def toggle_pause():
+    togglePause()
+    return '', 204
 
 @app.route('/ids')
 def listIds():

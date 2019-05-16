@@ -22,3 +22,10 @@ HOW TO CALC ACC:
 - run python3 main.py
 - run python3 ground_truth_parser.py
 - run python3 calc_acc.py
+
+APis
+GET 0.0.0.0:5000/toggle-pause
+GET 0.0.0.0:5000/run?imshow=True # case True cv windows will appear
+GET 0.0.0.0:5000/ids # returns an array [ [<id>,<hidden?>] ]
+GET 0.0.0.0:5000/ids/hide?id=<id>
+GET 0.0.0.0:5000/ids/show?id=<id>
