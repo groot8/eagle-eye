@@ -115,6 +115,9 @@ last_id = 0
 
 pause = False
 
+def get_fbs():
+    global fbs
+    return fbs
 def togglePause():
     global pause
     pause = not pause
@@ -215,7 +218,7 @@ class avatar():
                     imutils.resize(board, width=600))
 
     def getFrame(self):
-        return self.frames.pop()
+        return self.frames.pop(0)
 
     def __init__(self, video, save_output, imshow, calibration_file, points_color):
         self.frames = []
@@ -355,6 +358,8 @@ class avatar():
         board = frame
         # increment detection counter and reset trackers if reach max
         current_FPS = self.vs.get(cv2.CAP_PROP_FPS)
+        global fbs
+        fbs = current_FPS
         self.detection_counter += 1 / current_FPS
 
         # print(self.detection_counter)

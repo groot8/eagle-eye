@@ -1,5 +1,5 @@
 import argparse
-from tracker import avatar,d_ps,set_ground_truth_file_path, showId, hideId, getIds, togglePause
+from tracker import avatar,d_ps,set_ground_truth_file_path, showId, hideId, getIds, togglePause, get_fbs
 import numpy as np
 
 calibration_files = [
@@ -76,13 +76,16 @@ CORS(app)
 
 
 def gen(si):
+    delay = 1 / get_fbs()
+    last_frame = None
     while True:
         # Capture frame-by-frame
         try:
-            yield streams[si].getFrame()
+            sleep(delay)
+            last_frame = streams[si].getFrame()
+            yield last_frame
         except:
-            sleep(1)
-            print("[stream#"+str(si)+"]pause")
+            yield last_frame
 
 @app.route('/')
 def index():
