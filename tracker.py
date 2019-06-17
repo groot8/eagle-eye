@@ -11,6 +11,7 @@ import cv2
 import math
 from  yolo3.test import *
 from time import sleep
+from lab import *
 stream_num = 0
 frame_num = 0
 d_ps = []
@@ -42,31 +43,11 @@ def get_distance(point1, point2):
     return math.sqrt((point1[0] - point2[0])**2+(point1[1] - point2[1])**2)
 
 # point has the form [(posX, posY), (r, g, b), stream_num, flag]
-# this flag if true it indicates that this point has already been clustered so ignore it (True == occupied)
-# however here we use the first 3 elements only
-def find_nearst_point_from_spec_stream(point, list_points, stream_num):
-    target = None
-    error = float("inf")
-    for cur_point in list_points:
-        # if it has different stream num than the required or alredy occupied then continue
-        if cur_point[2] != stream_num or cur_point[3]:
-            continue
-        distance = get_distance(point[0], cur_point[0])
-        if distance < error:
-            error = distance
-            target = cur_point
-    global maxError
-    if error <= maxError:
-        return target
-    else:
-        return None
-
-# point has the form [(posX, posY), (r, g, b), stream_num, flag]
 # however here we use the first element only
-def find_nearst_point(point, list_points, maxError):
+def find_nearst_point(point, d_points, maxError):
     target = None
     error = float("inf")
-    for cur_point in list_points:
+    for cur_point in d_points:
         distance = get_distance(point[0], cur_point[0])
         if distance < error:
             error = distance
@@ -75,41 +56,13 @@ def find_nearst_point(point, list_points, maxError):
         return target
     else:
         return None
-
-# point has the form [(posX, posY), (r, g, b), stream_num, flag]
-def make_clusters(list_points):
-    clusters = []
-    #last stream index    
-    global stream_num #the last stream num found
-    for point in list_points:
-        # if point already in a cluster then continue
-        if point[3]:
-            continue
-        # consider this point a cluster then loop try to find nearst points in other streams
-        cluster = point
-        # since we made a cluster of this point we should set flag to true to indicate that it is occupied 
-        point[2] = True
-        for i in range(stream_num + 1):
-            # we dont want to find any nearst point in the same stream so we continue if the point has the same stream num
-            if point[2] == i:
-                continue
-            # try to find nearst point in stream i
-            target = find_nearst_point_from_spec_stream(cluster, list_points, i)
-            # if found then update cluster point to be the intermediate point between org point and the match found
-            if target is not None:
-                # set flag in target point to true to indicate that it is occupied
-                target[3] = True
-                cluster = ((int((cluster[0][0]+target[0][0])/2), int((cluster[0][1]+target[0][1])/2)),(int((cluster[1][0]+target[1][0])/2),int((cluster[1][1]+target[1][1])/2),int((cluster[1][2]+target[1][2])/2)))
-        # then append the cluster to the clusters array and continue processing the other points
-        clusters.append(cluster)
-    return clusters
 
 shape = (0, 0, 0)
 
 maxError =  100 #max distance between points to form a cluster
 maxErrorForBoxToGetId = 20 #max distance between points to form a cluster
 maxErrorForIds = 40 #max distance between old cluster and the new one
-list_points = [] #this would be overwritten after each forward
+d_points = [] #this would be overwritten after each forward
 ids = [] #this would not be overwirtten but updated
 last_id = 0
 
@@ -121,38 +74,6 @@ def get_fbs():
 def togglePause():
     global pause
     pause = not pause
-
-def validate_clusters(clusters):
-    # ids has the form of [(posx, posy), id_num, life_time, hide]
-    global ids
-    global last_id
-    for id in ids:
-        id[2] -= 1
-    # # for each cluster find the nearst id and if a match found within a certain threshold
-    # # then update the position of that match with the current cluster position and continue
-    # # if no match found then this is probalby a new id so append the cluster to the ids array
-    conterato = 0
-    clusters = clusters.copy()
-    while len(clusters) > 0:
-
-        conterato = conterato + 1
-        if(conterato>200 ):
-            break
-        cluster = clusters[0]
-        id = find_nearst_point(cluster, ids, maxErrorForIds)
-        if id is None:
-            last_id += 1
-            ids.append([cluster[0],last_id, 3, False])
-            clusters.remove(cluster)
-        else:
-            if(find_nearst_point(id, clusters, maxErrorForIds) != cluster):
-                continue
-            id[0] = cluster[0]
-            id[2] = 3
-            clusters.remove(cluster)
-    for id in ids:
-        if(id[2] <= 0):
-            ids.remove(id)
 
 def showId(i):
     global ids
@@ -184,38 +105,15 @@ class avatar():
     maxintersectionOverUnion = 0.2
     detection_interval = 1
 
-    def reset_list_points(imshow):
+    def updateIds(imshow):
         global shape # has shape of original frame
         board = np.zeros(shape, np.uint8)
-        board[:] = (0, 0, 0)
-        global list_points
-        # a point has the form of [(posX, posY), (r, g, b), stream_num, flag]
-        for point in list_points:
-            cv2.circle(board, point[0], 10, point[1], -1)
-        # a cluster has the form of [(posx, posy, (r, g, b))]
-        clusters = make_clusters(list_points)
-        global frame_num
-        print("#Frame : " + str(frame_num))
-        frame_num += 1
-        data = []
-        for cluster in clusters:
-            data.append(cluster[0])
-            cv2.circle(board, cluster[0], 15, cluster[1], -1)
-        if frame_num % 25 == 0:
-            global ground_truth_file_path
-            f= open(ground_truth_file_path,"a+")
-            f.write(str(frame_num) + " " + str(data) + "\n")
-            f.close()
-            # d_ps.append(data)
-        validate_clusters(clusters)
-        # global ids
-        # for id in ids:
-        #     cv2.putText(board, str(id[1]), id[0],
-        #                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 10)
-        list_points = []
-        if imshow:
-            cv2.imshow("Board",
-                    imutils.resize(board, width=600))
+        board[:] = (255, 255, 255)
+        global d_points
+        Person.updateIds(d_points)
+        Person.imDrawPersons(board)
+        cv2.imshow("Board", board)
+        d_points = []
 
     def getFrame(self):
         return self.frames.pop(0)
@@ -284,11 +182,8 @@ class avatar():
         # detections = self.net.forward()
         return detections
 
-    def validate_trackers(self):
-        global ids
-        list_ids = []
-        for id in ids:
-            list_ids.append(id)
+    def validate_and_link_trackers(self):
+        d_points = []
         index = 0
         for (t, l) in zip(self.trackers, self.labels):
             pos = t.get_position()
@@ -299,18 +194,37 @@ class avatar():
                 self.trackers.remove(t)
                 self.labels.remove(l)
                 continue
-            # # here you should use get_top_view_of_point with the point of bottom middle point on box to get position in top view  
-            # # find the nearst id to that view and append that id with the label of this box
-            label = "person"
+            self.labels[index] = ""
             point = (int(((startX+endX)/2)*(self.intial_width/600)), int(endY * (self.intial_width/600)))
-            id = find_nearst_point([self.get_top_view_of_point(point)],list_ids, 200)
-            if id is not None:
-                list_ids.remove(id)
-                if id[3]:
-                    self.labels[index] = ""
-                else:
-                    self.labels[index] = 'person '+ str(id[1])
+            pos = self.get_top_view_of_point(point)
+            cluster = Cluster(DPoint(pos[0], pos[1],(0, 0, 0),0))
+            cluster.s_i = 0
+            d_points.append(cluster)
             index += 1
+
+
+        for id in Person.persons_db:
+            if Person.persons_db[id].damaged():
+                continue 
+            Person.persons_db[id].s_i = 1
+            d_points.append(Person.persons_db[id])
+        person_cluster_clusters = KMeans.predict(d_points, Config.person_max_displacement)
+        
+
+        for person_cluster_cluster in person_cluster_clusters:
+            person = None
+            cluster = None
+            for person_or_cluster in person_cluster_cluster.d_points:
+                if str(type(person_or_cluster)) == "<class 'lab.Person'>":
+                    person = person_or_cluster
+                else:
+                    cluster = person_or_cluster
+            # fires when an id finds a match cluster
+            # probably id just made a small displacement
+            if person is not None and cluster is not None:
+                self.labels[d_points.index(cluster)] = "person " + str(person.id)
+                
+        print(self.labels)
 
     def search_and_match(self, tracker_index):
         pos = self.trackers[tracker_index].get_position()
@@ -431,7 +345,7 @@ class avatar():
                     self.labels.append(label)
                     self.trackers.append(t)
 
-            self.validate_trackers()
+            self.validate_and_link_trackers()
             # loop over each of the self.trackers
             for (t, l) in zip(self.trackers, self.labels):
                 #print(str(t))
@@ -514,8 +428,8 @@ class avatar():
         shape = board.shape
         for point in points:
             top_view = self.get_top_view_of_point(point)
-            global list_points
-            list_points.append([top_view, self.points_color, self.stream_num, False])
+            global d_points
+            d_points.append(DPoint(top_view[0], top_view[1], self.points_color, self.stream_num))
             cv2.circle(board, top_view, 5, self.points_color, -1)
         
         # example 2

@@ -62,7 +62,7 @@ def main(imshow):
     while True:
         for stream in streams:
             stream.forward()
-        avatar.reset_list_points(imshow)
+        avatar.updateIds(imshow)
     
     # print(d_ps)
 
