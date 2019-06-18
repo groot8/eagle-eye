@@ -12,9 +12,6 @@ import math
 from  yolo3.test import *
 from time import sleep
 from lab import *
-stream_num = 0
-frame_num = 0
-d_ps = []
 
 def set_ground_truth_file_path(path):
     global ground_truth_file_path
@@ -38,42 +35,14 @@ def intersectionOverUnion(bouns1, bouns2):
         return 1
     return intersection / (area1 + area2 - intersection)
 
-# point has the form (posX, posY)
-def get_distance(point1, point2):
-    return math.sqrt((point1[0] - point2[0])**2+(point1[1] - point2[1])**2)
-
-# point has the form [(posX, posY), (r, g, b), stream_num, flag]
-# however here we use the first element only
-def find_nearst_point(point, d_points, maxError):
-    target = None
-    error = float("inf")
-    for cur_point in d_points:
-        distance = get_distance(point[0], cur_point[0])
-        if distance < error:
-            error = distance
-            target = cur_point
-    if error <= maxError:
-        return target
-    else:
-        return None
-
-shape = (0, 0, 0)
-
-maxError =  100 #max distance between points to form a cluster
-maxErrorForBoxToGetId = 20 #max distance between points to form a cluster
-maxErrorForIds = 40 #max distance between old cluster and the new one
-d_points = [] #this would be overwritten after each forward
 ids = [] #this would not be overwirtten but updated
 last_id = 0
 
-pause = False
-
 def get_fbs():
-    global fbs
-    return fbs
+    return Avatar.fbs
+
 def togglePause():
-    global pause
-    pause = not pause
+    Avatar.pause = not Avatar.pause
 
 def showId(i):
     global ids
@@ -94,31 +63,34 @@ def getIds():
         res.append([id[1],id[3]])
     return res
 
-class avatar():
-    # initialize the list of class labels MobileNet SSD was trained to
-    # detect
+class Avatar():
+    # initialize the list of class labels MobileNet SSD was trained to detect
     CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
                "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
                "dog", "horse", "motorbike", "person", "pottedplant", "sheep",
                "sofa", "train", "tvmonitor"]
 
-    maxintersectionOverUnion = 0.2
-    detection_interval = 1
+    streams_count = 0
 
-    def updateIds(imshow):
+    pause = False
+
+    fbs = 0
+
+    d_points = []
+
+    def learn(imshow):
         global shape # has shape of original frame
         board = np.zeros(shape, np.uint8)
         board[:] = (255, 255, 255)
-        global d_points
-        Person.updateIds(d_points)
+        Person.updateIds(Avatar.d_points)
         Person.imDrawPersons(board)
         cv2.imshow("Board", board)
-        d_points = []
+        Avatar.d_points = []
 
     def getFrame(self):
         return self.frames.pop(0)
 
-    def __init__(self, video, save_output, imshow, calibration_file, points_color):
+    def __init__(self, video, save_output, imshow, calibration_file, points_color, start_time = 0, end_time = float("inf")):
         self.frames = []
         # load our serialized model from disk
         # print("[INFO] loading model...")
@@ -129,16 +101,13 @@ class avatar():
         # start the frames per second throughput estimator
         self.fps = FPS().start()
         self.save_output = save_output
-        # self.confidence = confidence
-        global stream_num
-        stream_num += 1
-        self.stream_num = stream_num
+        self.s_i = Avatar.streams_count # assigning the stream index
+        Avatar.streams_count += 1
         # initialize the list of object trackers and corresponding class
         # labels
         self.trackers = []
         self.labels = []
         # intialize id
-        self.id = 1
         self.frame = None
         # counter to reset trackers
         self.detection_counter = 0
@@ -147,6 +116,14 @@ class avatar():
         self.points_color = points_color
         # flag to diplay cv2 imshow windoes or not
         self.imshow = imshow
+        # start time and end time in sec
+        Avatar.fbs = self.vs.get(cv2.CAP_PROP_FPS)
+        self.frames_counter = 0 
+        # to start stream from specific time
+        while self.frames_counter / Avatar.fbs < start_time and start_time != 0:
+            self.vs.read()
+            self.frames_counter += 1
+        self.max_frames_counter = end_time * Avatar.fbs
 
     def __del__(self):
         # stop the timer and display FPS information
@@ -232,7 +209,7 @@ class avatar():
         startX, startY = int(pos.left()), int(pos.top())
         endX, endY = int(pos.right()), int(pos.bottom())
         boundries = (startX, startY, endX, endY)
-        maxintersectionOverUnion = 0
+        intersection_over_union_ratio = 0
         target = -1
         index = -1
         for t in self.trackers:
@@ -245,39 +222,44 @@ class avatar():
             endX, endY = int(pos.right()), int(pos.bottom())
             temp = intersectionOverUnion(
                 boundries, (startX, startY, endX, endY))
-            if temp > maxintersectionOverUnion:
-                maxintersectionOverUnion = temp
+            if temp > intersection_over_union_ratio:
+                intersection_over_union_ratio = temp
                 target = index
-        #print(minError)
-        if maxintersectionOverUnion > self.maxintersectionOverUnion:
+        if intersection_over_union_ratio > Config.max_intersection_over_union:
             return target
         else:
             return -1
 
     def forward(self):
-        global pause
-        if pause:
+
+        if self.frames_counter > self.max_frames_counter:
+            self.__del__()
+            assert(False)
+
+        if Avatar.pause:
             sleep(0.5)
             return 
         points = []
+
+        # uncomment to print frame counter
+        # print(self.frames_counter, self.max_frames_counter)
+
+        self.frames_counter += 1
+
         # grab the next frame from the video file
         (grabbed, frame) = self.vs.read()
         intial_width = frame.shape[1]
         self.intial_width = intial_width
-        # # Create a blank 300x300 black image
+        # Create a blank 300x300 black image
         board = np.zeros(
             (frame.shape[0], frame.shape[1], frame.shape[2]), np.uint8)
-        # # Fill board with red color(set each pixel to red)
+        # Fill board with red color(set each pixel to red)
         board[:] = (0, 0, 0)
         board = frame
         # increment detection counter and reset trackers if reach max
-        current_FPS = self.vs.get(cv2.CAP_PROP_FPS)
-        global fbs
-        fbs = current_FPS
-        self.detection_counter += 1 / current_FPS
+        self.detection_counter += 1 / Avatar.fbs
 
-        # print(self.detection_counter)
-        if self.detection_counter >= self.detection_interval:
+        if self.detection_counter >= Config.detection_interval:
             self.detection_counter = 0
 
         # check to see if we have reached the end of the video file
@@ -295,7 +277,7 @@ class avatar():
         # the writer
         if self.writer is None and self.save_output:
             fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-            self.writer = cv2.VideoWriter('output/'+str(self.stream_num)+'.avi', fourcc, 30,
+            self.writer = cv2.VideoWriter('output/'+str(self.s_i)+'.avi', fourcc, 30,
                                           (frame.shape[1], frame.shape[0]), True)
 
         # if there are no object trackers we first need to detect objects
@@ -341,8 +323,7 @@ class avatar():
 
                     # update our set of trackers and corresponding class
                     # labels
-                    label = "person"
-                    self.labels.append(label)
+                    self.labels.append("")
                     self.trackers.append(t)
 
             self.validate_and_link_trackers()
@@ -353,21 +334,7 @@ class avatar():
                 # unpack the position object
                 startX, startY = int(pos.left()), int(pos.top())
                 endX, endY = int(pos.right()), int(pos.bottom())
-                if l == "":
-                    try:
-                        sub_face = frame[startY:endY, startX:endX]
-                        # Get input size
-                        width, height, _ = sub_face.shape
-                        # Desired "pixelated" size
-                        w, h = (16, 16)
-                        # Resize input to "pixelated" size
-                        sub_face = cv2.resize(sub_face, (w, h), interpolation=cv2.INTER_LINEAR)
-                        # Initialize output image
-                        sub_face = cv2.resize(sub_face, (height, width), interpolation=cv2.INTER_NEAREST)
-                        frame[startY:endY, startX:endX] = sub_face
-                    except:
-                        pass
-                else:
+                if l != "":
                     # draw the bounding box from the correlation object tracker
                     # if confidencex >= 0.5:
                     cv2.rectangle(frame, (startX, startY), (endX, endY),
@@ -391,21 +358,7 @@ class avatar():
                 # unpack the position object
                 startX, startY = int(pos.left()), int(pos.top())
                 endX, endY = int(pos.right()), int(pos.bottom())
-                if l == "":
-                    try:
-                        sub_face = frame[startY:endY, startX:endX]
-                        # Get input size
-                        width, height, _ = sub_face.shape
-                        # Desired "pixelated" size
-                        w, h = (16, 16)
-                        # Resize input to "pixelated" size
-                        sub_face = cv2.resize(sub_face, (w, h), interpolation=cv2.INTER_LINEAR)
-                        # Initialize output image
-                        sub_face = cv2.resize(sub_face, (height, width), interpolation=cv2.INTER_NEAREST)
-                        frame[startY:endY, startX:endX] = sub_face
-                    except:
-                        pass
-                else:
+                if l != "":
                     # draw the bounding box from the correlation object tracker
                     # if confidencex >= 0.5:
                     cv2.rectangle(frame, (startX, startY), (endX, endY),
@@ -428,20 +381,11 @@ class avatar():
         shape = board.shape
         for point in points:
             top_view = self.get_top_view_of_point(point)
-            global d_points
-            d_points.append(DPoint(top_view[0], top_view[1], self.points_color, self.stream_num))
+            Avatar.d_points.append(DPoint(top_view[0], top_view[1], self.points_color, self.s_i))
             cv2.circle(board, top_view, 5, self.points_color, -1)
-        
-        # example 2
-        # for point in points:
-        #     cv2.circle(board, point, 1, self.points_color, -1)
-        # board = self.get_top_view(board)
 
-        # show the output frame
-        # cv2.imshow("Frame(cal)"+str(self.stream_num),
-        #            imutils.resize(board, width=600))
         if self.imshow:
-            cv2.imshow("Frame"+str(self.stream_num), frame)
+            cv2.imshow("Frame"+str(self.s_i), frame)
             key = cv2.waitKey(1) & 0xFF
             if key == ord("s"):
                 while (cv2.waitKey(1) & 0xFF) != ord("s"):

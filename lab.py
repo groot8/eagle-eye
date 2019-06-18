@@ -3,9 +3,11 @@ import math
 
 # configuration
 class Config:
-    cluster_max_error = 200
-    person_max_displacement = 100
-    person_life = 3
+    cluster_max_error = 200 # max distance between d_points to form a cluster
+    person_max_displacement = 100 # max distance between clusters & persons to form a person_cluster_cluster
+    person_life = 3 # number of times that a person won't appear in any person_cluster_cluster before damaged
+    max_intersection_over_union = 0.2 # max ratio between trackers overlapping on each other
+    detection_interval = 1 # interval between detections
 
 # base class
 class Point:

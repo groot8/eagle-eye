@@ -1,5 +1,5 @@
 import argparse
-from tracker import avatar,d_ps,set_ground_truth_file_path, showId, hideId, getIds, togglePause, get_fbs
+from tracker import *
 import numpy as np
 
 calibration_files = [
@@ -35,9 +35,15 @@ points_colors = [
 
 ground_truth_file_path = 'output/cal_ground_truth_list.txt'
 
-streams = []
+def convert_to_secs(time_string, ref):
+    if time_string is None:
+        return ref
+    temp = time_string.split(':')
+    return float(temp[0])*60+float(temp[1]) 
 
-def main(imshow):
+def main(imshow, start_time, end_time):
+    print(start_time, end_time)
+    streams = []
     # construct the argument parser and parse the arguments
     # ap = argparse.ArgumentParser()
     # ap.add_argument("-p", "--prototxt", required=True,
@@ -51,18 +57,20 @@ def main(imshow):
     # args = vars(ap.parse_args())
     # args = {'video':'../GP_Data/terrace1-c0.avi,../GP_Data/terrace1-c1.avi'}
     args = {'video':'dataset/terrace1-c0.avi,dataset/terrace1-c1.avi,dataset/terrace1-c2.avi,dataset/terrace1-c3.avi'}
-
     for (src, calibration_file, points_color) in zip(args['video'].split(','), calibration_files, points_colors):
-        streams.append(avatar(src, False, imshow, calibration_file, points_color))
-    
+        streams.append(Avatar(src, True, imshow, calibration_file, points_color, start_time, end_time))    
+
     f= open(ground_truth_file_path,"w+")
     f.close()
     set_ground_truth_file_path(ground_truth_file_path)
 
     while True:
-        for stream in streams:
-            stream.forward()
-        avatar.updateIds(imshow)
+        try:
+            for stream in streams:
+                stream.forward()
+            Avatar.learn(imshow)
+        except:
+            break
     
     # print(d_ps)
 
@@ -112,7 +120,13 @@ def hide():
 
 @app.route('/run')
 def run():
-    main(eval(request.args.get('imshow')))
+    main(
+        eval(
+            request.args.get('imshow'), 
+        ),
+        convert_to_secs(request.args.get('start'),0), 
+        convert_to_secs(request.args.get('end'),float("inf"))
+    )
     return '', 204
 
 @app.route('/video_feed')
