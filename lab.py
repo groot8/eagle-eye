@@ -1,5 +1,6 @@
 import cv2
 import math
+import numpy as np
 
 # configuration
 class Config:
@@ -28,27 +29,29 @@ class Point:
         )
 
     @staticmethod
-    def imDrawPoints(img, points_list, p_size = 10):
+    def imDrawPoints(img, points_list, p_size = 5):
         for point in points_list:
             cv2.circle(img, point.getPosition(), p_size, point.color, -1)
 
 # dectection point from specific stream
 class DPoint(Point):
 
-    def __init__(self, pos_x, pos_y, color, s_i):        
+    def __init__(self, pos_x, pos_y, color, s_i, detection_features = np.array([])):        
         # pos_x & pos_y in the top view
         # s_i stands for stream index
         super().__init__(pos_x, pos_y, color)
         self.s_i = s_i
+        self.detection_features = detection_features
 
 # group of d_points that represent a person
 class Cluster(Point):
 
-    def __init__(self, i_d_point = None):
+    def __init__(self, i_d_point = None, detection_features = np.array([])):
         # i_d_point stands for initial point for a cluster
         self.d_points = []
         if i_d_point is not None:
             self.addDPoint(i_d_point)
+        self.detection_features = detection_features
 
     def replaceRoot(self, cluster):
         self.d_points = cluster.d_points
@@ -58,6 +61,11 @@ class Cluster(Point):
         (pos_x, pos_y, b, g, r) = (0, 0, 0, 0, 0)
         length = len(self.d_points)
         for i in range(length):
+            if i == 0:
+                # make sure copy does deeb copy of the features xDD
+                self.detection_features = self.d_points[i].detection_features.copy()
+            else:
+                self.detection_features += self.d_points[i].detection_features
             pos_x += self.d_points[i].pos_x
             pos_y += self.d_points[i].pos_y
             b += self.d_points[i].color[0]
@@ -65,6 +73,7 @@ class Cluster(Point):
             r += self.d_points[i].color[2]
         (pos_x, pos_y, b, g, r) = (int(pos_x/length), int(pos_y/length), int(b/length), int(g/length), int(r/length))
         (self.pos_x, self.pos_y, self.color) = (pos_x, pos_y, (b, g, r))
+        self.detection_features = self.detection_features / length
 
     def addDPoint(self, d_point):
         self.d_points.append(d_point)
@@ -91,7 +100,7 @@ class Cluster(Point):
         cv2.circle(img, self.getPosition(), p_size, self.color, -1)
 
     @staticmethod
-    def imDrawClusters(img, clusters, p_size = 10, l_size = 2):
+    def imDrawClusters(img, clusters, p_size = 5, l_size = 1):
         for cluster in clusters:
             cluster.imDraw(img, p_size, l_size)
 
@@ -158,13 +167,35 @@ class Person(Cluster):
     def damaged(self):
         return self.life <= 0
 
+    report_file_path = '/home/yousif-elmos/Desktop/college/eagle-eye/output/report.json'
+
+    report_file_stream = None
+
     @staticmethod
-    def imDrawPersons(img, p_size = 10, l_size = 2):
+    def saveReport():
+        if Person.report_file_stream is None and Person.report_file_path is not None:
+            Person.report_file_stream = open(Person.report_file_path, "w+")
+        Person.report_file_stream.write('{')
+        flag = True
+        for id in Person.persons_db:
+            if Person.persons_db[id].damaged():
+                continue
+            string = '"'+str(id)+'":['+str(Person.persons_db[id].pos_x)+','+str(Person.persons_db[id].pos_y)+']'
+            if flag:
+                flag = False
+            else:
+                string = ","+string
+            Person.report_file_stream.write(string)            
+        Person.report_file_stream.write('}\n')
+
+    @staticmethod
+    def imDrawPersons(img, p_size = 5, l_size = 1):
         for id in Person.persons_db:
             if Person.persons_db[id].damaged():
                 continue
             Person.persons_db[id].imDraw(img, p_size, l_size)
-    
+        Person.saveReport()
+
     # this method is responsible for updating ids positions and decide
     # what clusters should make new persons and what should not
     @staticmethod
@@ -203,6 +234,7 @@ class Person(Cluster):
             # first when a cluster doesn't find a match
             # probably someone new appeared
             else:
+                # here goes your code
                 Person(cluster)
         
         del person_cluster_clusters

@@ -56,20 +56,21 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-s", "--start", required=False)
 ap.add_argument("-e", "--end", required=False)
 args = vars(ap.parse_args())
+(start, end) = (convert_to_secs(args["start"], 0), convert_to_secs(args["end"], float('inf')))
 args = {'video':'dataset/terrace1-c0.avi,dataset/terrace1-c1.avi,dataset/terrace1-c2.avi,dataset/terrace1-c3.avi'}
 for (src, calibration_file, points_color) in zip(args['video'].split(','), calibration_files, points_colors):
-    streams.append(Avatar(src, True, calibration_file, points_color, 0, 30))    
+    streams.append(Avatar(src, True, calibration_file, points_color, start, end))    
 
 f= open(ground_truth_file_path,"w+")
 f.close()
 set_ground_truth_file_path(ground_truth_file_path)
 
-while True:
-    try:
+try:
+    while True:
         for stream in streams:
             stream.forward()
         Avatar.learn()
-    except:
-        break
+except:
+    pass
 
 
