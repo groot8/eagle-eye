@@ -41,100 +41,35 @@ def convert_to_secs(time_string, ref):
     temp = time_string.split(':')
     return float(temp[0])*60+float(temp[1]) 
 
-def main(imshow, start_time, end_time):
-    print(start_time, end_time)
-    streams = []
-    # construct the argument parser and parse the arguments
-    # ap = argparse.ArgumentParser()
-    # ap.add_argument("-p", "--prototxt", required=True,
-                    # help="path to Caffe 'deploy' prototxt file")
-    # ap.add_argument("-m", "--model", required=True,
-                    # help="path to Caffe pre-trained model")
-    # ap.add_argument("-v", "--video", required=True,
-                    # help="path to input video file")
-    # ap.add_argument("-c", "--confidence", type=float, default=0.2,
-                    # help="minimum probability to filter weak detections")
-    # args = vars(ap.parse_args())
-    # args = {'video':'../GP_Data/terrace1-c0.avi,../GP_Data/terrace1-c1.avi'}
-    args = {'video':'dataset/terrace1-c0.avi,dataset/terrace1-c1.avi,dataset/terrace1-c2.avi,dataset/terrace1-c3.avi'}
-    for (src, calibration_file, points_color) in zip(args['video'].split(','), calibration_files, points_colors):
-        streams.append(Avatar(src, True, imshow, calibration_file, points_color, start_time, end_time))    
+streams = []
+# construct the argument parser and parse the arguments
+ap = argparse.ArgumentParser()
+# ap.add_argument("-p", "--prototxt", required=True,
+                # help="path to Caffe 'deploy' prototxt file")
+# ap.add_argument("-m", "--model", required=True,
+                # help="path to Caffe pre-trained model")
+# ap.add_argument("-v", "--video", required=True,
+                # help="path to input video file")
+# ap.add_argument("-c", "--confidence", type=float, default=0.2,
+                # help="minimum probability to filter weak detections")
+# args = {'video':'../GP_Data/terrace1-c0.avi,../GP_Data/terrace1-c1.avi'}
+ap.add_argument("-s", "--start", required=False)
+ap.add_argument("-e", "--end", required=False)
+args = vars(ap.parse_args())
+args = {'video':'dataset/terrace1-c0.avi,dataset/terrace1-c1.avi,dataset/terrace1-c2.avi,dataset/terrace1-c3.avi'}
+for (src, calibration_file, points_color) in zip(args['video'].split(','), calibration_files, points_colors):
+    streams.append(Avatar(src, True, calibration_file, points_color, 0, 30))    
 
-    f= open(ground_truth_file_path,"w+")
-    f.close()
-    set_ground_truth_file_path(ground_truth_file_path)
+f= open(ground_truth_file_path,"w+")
+f.close()
+set_ground_truth_file_path(ground_truth_file_path)
 
-    while True:
-        try:
-            for stream in streams:
-                stream.forward()
-            Avatar.learn(imshow)
-        except:
-            break
-    
-    # print(d_ps)
-
-from flask import Flask, render_template, Response, request, jsonify
-import cv2
-from time import time, sleep
-from flask_cors import CORS
-
-app = Flask(__name__)
-CORS(app)
-
-
-def gen(si):
-    delay = 1 / get_fbs()
-    last_frame = None
-    while True:
-        # Capture frame-by-frame
-        try:
-            sleep(delay)
-            last_frame = streams[si].getFrame()
-            yield last_frame
-        except:
-            yield last_frame
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/toggle-pause')
-def toggle_pause():
-    togglePause()
-    return '', 204
-
-@app.route('/ids')
-def listIds():
-    return jsonify(getIds())
-
-@app.route('/ids/show')
-def show():
-    showId(int(request.args.get('id')))
-    return '', 204
-
-@app.route('/ids/hide')
-def hide():
-    hideId(int(request.args.get('id')))
-    return '', 204
-
-@app.route('/run')
-def run():
-    main(
-        eval(
-            request.args.get('imshow'), 
-        ),
-        convert_to_secs(request.args.get('start'),0), 
-        convert_to_secs(request.args.get('end'),float("inf"))
-    )
-    return '', 204
-
-@app.route('/video_feed')
-def video_feed():
-    return Response(gen(int(request.args.get('si'))),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+while True:
+    try:
+        for stream in streams:
+            stream.forward()
+        Avatar.learn()
+    except:
+        break
 
 

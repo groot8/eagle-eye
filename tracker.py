@@ -78,7 +78,7 @@ class Avatar():
 
     d_points = []
 
-    def learn(imshow):
+    def learn():
         global shape # has shape of original frame
         board = np.zeros(shape, np.uint8)
         board[:] = (255, 255, 255)
@@ -90,7 +90,7 @@ class Avatar():
     def getFrame(self):
         return self.frames.pop(0)
 
-    def __init__(self, video, save_output, imshow, calibration_file, points_color, start_time = 0, end_time = float("inf")):
+    def __init__(self, video, save_output, calibration_file, points_color, start_time = 0, end_time = float("inf")):
         self.frames = []
         # load our serialized model from disk
         # print("[INFO] loading model...")
@@ -114,8 +114,6 @@ class Avatar():
         self.writer = None
         self.calibration_file = calibration_file
         self.points_color = points_color
-        # flag to diplay cv2 imshow windoes or not
-        self.imshow = imshow
         # start time and end time in sec
         Avatar.fbs = self.vs.get(cv2.CAP_PROP_FPS)
         self.frames_counter = 0 
@@ -384,15 +382,14 @@ class Avatar():
             Avatar.d_points.append(DPoint(top_view[0], top_view[1], self.points_color, self.s_i))
             cv2.circle(board, top_view, 5, self.points_color, -1)
 
-        if self.imshow:
-            cv2.imshow("Frame"+str(self.s_i), frame)
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("s"):
-                while (cv2.waitKey(1) & 0xFF) != ord("s"):
-                    pass
-            # if the `q` key was pressed, break from the loop
-            if key == ord("q"):
-                return
+        cv2.imshow("Frame"+str(self.s_i), frame)
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord("s"):
+            while (cv2.waitKey(1) & 0xFF) != ord("s"):
+                pass
+        # if the `q` key was pressed, break from the loop
+        if key == ord("q"):
+            return
         self.frames.append((b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + cv2.imencode('.jpg', frame)[1].tostring() + b'\r\n'))
         # update the FPS counter
