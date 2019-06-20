@@ -379,7 +379,8 @@ class Avatar():
         shape = board.shape
         for point in points:
             top_view = self.get_top_view_of_point(point)
-            Avatar.d_points.append(DPoint(top_view[0], top_view[1], self.points_color, self.s_i, np.array([self.s_i])))
+            if top_view[0] >= 0 and top_view[1] >= 0:
+                Avatar.d_points.append(DPoint(top_view[0], top_view[1], self.points_color, self.s_i, np.array([self.s_i])))
             cv2.circle(board, top_view, 5, self.points_color, -1)
 
         cv2.imshow("Frame"+str(self.s_i), frame)

@@ -4,7 +4,7 @@ import numpy as np
 
 # configuration
 class Config:
-    cluster_max_error = 200 # max distance between d_points to form a cluster
+    cluster_max_error = 100 # max distance between d_points to form a cluster
     person_max_displacement = 100 # max distance between clusters & persons to form a person_cluster_cluster
     person_life = 3 # number of times that a person won't appear in any person_cluster_cluster before damaged
     max_intersection_over_union = 0.2 # max ratio between trackers overlapping on each other
@@ -224,7 +224,7 @@ class Person(Cluster):
                     cluster = person_or_cluster
             # fires when an id finds a match cluster
             # probably id just made a small displacement
-            if person is not None and cluster is not None:
+            if person is not None and cluster is not None and len(cluster.d_points) >= 2:
                 person.replaceRoot(cluster)
                 person.heal()
             # fires when an id doesn't find a match            
@@ -233,7 +233,7 @@ class Person(Cluster):
                 person.causeDamage()
             # first when a cluster doesn't find a match
             # probably someone new appeared
-            else:
+            elif len(cluster.d_points) >= 2:
                 # here goes your code
                 Person(cluster)
         
