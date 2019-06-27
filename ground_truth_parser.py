@@ -23,11 +23,11 @@ def parse(file_name):
         elif(i == 1):
             [no_of_frames, no_of_people, grid_width, grid_height, step_size, first_frame, last_frame] = arr[i].split()
             for j in range(1, int(no_of_people) + 1):
-                output_text += str(j)
+                output_text += str(j - 1)
                 if j == int(no_of_people):
                     output_text += "\n"
                 else:
-                    output_text += ","                    
+                    output_text += ";"                    
         else:
             for j in range(0, int(no_of_people)):
                 if(arr[i].split()[j] == "-2" or arr[i].split()[j] == "-1"):
@@ -38,7 +38,7 @@ def parse(file_name):
                 if j + 1 == int(no_of_people):
                     output_text += "\n"
                 else:
-                    output_text += ","   
+                    output_text += ";"   
     return output_text[0:-1]
 
 print(parse(sys.argv[-1]))

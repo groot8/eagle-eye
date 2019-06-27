@@ -11,15 +11,15 @@ people_count = data.reduce((a, c) => {
 }, []).length
 var output = ""
 for (var j = 1; j < people_count; j++) {
-    output += `${j},`
+    output += `${j - 1};`
 }
 output += `${j}\n`
 for (var i = 0; i < data.length; i++) {
     for (var j = 0; j < (people_count - 1); j++) {
         if (data[i][j] !== undefined) {       
-            output += `[${data[i][j][0]},${data[i][j][1]}],`
+            output += `[${data[i][j][0]},${data[i][j][1]}];`
         }else{
-            output += `-2,`
+            output += `-2;`
         }
     }
     if (data[i][j] !== undefined) {       
