@@ -28,7 +28,7 @@ def parse(file_name):
                     output_text += "\n"
                 else:
                     output_text += ";"                    
-        else:
+        elif(i > 76 and (i - 77) % 25 == 0):
             for j in range(0, int(no_of_people)):
                 if(arr[i].split()[j] == "-2" or arr[i].split()[j] == "-1"):
                     output_text += arr[i].split()[j]

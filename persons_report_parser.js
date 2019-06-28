@@ -13,22 +13,33 @@ var output = ""
 for (var j = 1; j < people_count; j++) {
     output += `${j - 1};`
 }
-output += `${j}\n`
-for (var i = 0; i < data.length; i++) {
-    for (var j = 0; j < (people_count - 1); j++) {
-        if (data[i][j] !== undefined) {       
-            output += `[${data[i][j][0]},${data[i][j][1]}];`
-        }else{
-            output += `-2;`
+output += `${j - 1}\n`
+for (var i = 75; i < data.length - 1; i++) {
+    if ((i - 75) % 25 != 0) continue
+    for (var j = 0; j < people_count - 1; j++) {
+        if (data[i][j + 1] === undefined) {
+            output += "-2;"
+        } else {
+            output += `[${data[i][j + 1][0]},${data[i][j + 1][1]}];`
         }
     }
-    if (data[i][j] !== undefined) {       
-        output += `[${data[i][j][0]},${data[i][j][1]}]`
-    }else{
-        output += `-2`
+    if (data[i][j + 1] === undefined) {
+        output += "-2"
+    } else {
+        output += `[${data[i][j + 1][0]},${data[i][j + 1][1]}]`
     }
-    if (i + 1 != data.length) {
-        output += '\n'
+    output += '\n'
+}
+for (var j = 0; j < people_count - 1; j++) {
+    if (data[i][j + 1] === undefined) {
+        output += "-2;"
+    } else {
+        output += `[${data[i][j + 1][0]},${data[i][j + 1][1]}];`
     }
+}
+if (data[i][j + 1] === undefined) {
+    output += "-2"
+} else {
+    output += `[${data[i][j + 1][0]},${data[i][j + 1][1]}]`
 }
 console.log(output)

@@ -146,7 +146,9 @@ class Avatar():
         return (int(result[0]), int(result[1]))
 
     def get_top_view(self, frame):
-        return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (700, 560))
+        x = cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (700, 560))
+        print(x.shape)
+        return x
         # return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (360, 288))
 
     def detect_people(self, img):
