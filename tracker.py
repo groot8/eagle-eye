@@ -147,7 +147,6 @@ class Avatar():
 
     def get_top_view(self, frame):
         x = cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (700, 560))
-        print(x.shape)
         return x
         # return cv2.warpPerspective(frame, self.calibration_file/self.calibration_file[2][2], (360, 288))
 
@@ -240,6 +239,8 @@ class Avatar():
             sleep(0.5)
             return 
         points = []
+
+        features = []
 
         # uncomment to print frame counter
         # print(self.frames_counter, self.max_frames_counter)
@@ -334,6 +335,7 @@ class Avatar():
                 # unpack the position object
                 startX, startY = int(pos.left()), int(pos.top())
                 endX, endY = int(pos.right()), int(pos.bottom())
+                features.append(frame[startY: endY, startX : endX].copy())
                 if l != "":
                     # draw the bounding box from the correlation object tracker
                     # if confidencex >= 0.5:
@@ -358,6 +360,7 @@ class Avatar():
                 # unpack the position object
                 startX, startY = int(pos.left()), int(pos.top())
                 endX, endY = int(pos.right()), int(pos.bottom())
+                features.append(frame[startY: endY, startX : endX].copy())
                 if l != "":
                     # draw the bounding box from the correlation object tracker
                     # if confidencex >= 0.5:
@@ -379,11 +382,13 @@ class Avatar():
         board = self.get_top_view(board)
         global shape
         shape = board.shape
+        i = 0
         for point in points:
             top_view = self.get_top_view_of_point(point)
             if top_view[0] >= 0 and top_view[1] >= 0:
-                Avatar.d_points.append(DPoint(top_view[0], top_view[1], self.points_color, self.s_i, np.array([self.s_i])))
+                Avatar.d_points.append(DPoint(top_view[0], top_view[1], self.points_color, self.s_i, features[i]))
             cv2.circle(board, top_view, 5, self.points_color, -1)
+            i += 1
 
         cv2.imshow("Frame"+str(self.s_i), frame)
         key = cv2.waitKey(1) & 0xFF
