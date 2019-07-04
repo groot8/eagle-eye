@@ -1,75 +1,109 @@
-import math
-import re
+import sys
 
-# point has the form (posX, posY)
-def get_distance(point1, point2):
-    return math.sqrt((point1[0] - point2[0])**2+(point1[1] - point2[1])**2)
+from lab import *
 
-def find_nearst_point(point, list_points):
-    target = None
-    error = float("inf")
-    for cur_point in list_points:
-        distance = get_distance(point[0], cur_point[0])
-        if distance < error:
-            error = distance
-            target = cur_point
-    return (target,error)
+actual_data = None
+calc_data = None
 
-def calc_error(t_ps, d_ps, max_distance):
-    t_ps = t_ps.copy()
-    d_ps = d_ps.copy()
-    acc_error = 0
-    errors_count = 0
-    while(len(t_ps) != 0):
-        t_p = t_ps[0]
-        (match_d_p, cur_error) = find_nearst_point(t_p,d_ps)
-        if match_d_p is None:
-            errors_count += 1
-            acc_error += 1
-            t_ps.remove(t_p)
-        else:
-            (match_t_p, _) = find_nearst_point(match_d_p,t_ps)
-            if match_t_p != t_p:
-                t_ps.remove(t_p)
-                t_ps.append(t_p)
-                continue
-            errors_count += 1
-            acc_error += cur_error / max_distance
-            d_ps.remove(match_d_p)
-            t_ps.remove(t_p)
-    errors_count += len(d_ps)
-    acc_error += len(d_ps)
-    if acc_error == 0:
-        return acc_error        
-    else:
-        return acc_error / errors_count
+def transfrom(text):
+    result = []
+    temp = text.split('\n')[1:]
+    for row in temp:
+        t_r = []
+        for col in row.split(';'):
+            v = eval(col)
+            t_r.append(None if v == -1 or v == -2 else v)
+        result.append(t_r)
+    return result
+
+with open(sys.argv[1], 'r') as temp:
+    actual_data = transfrom(temp.read())
+
+with open(sys.argv[2], 'r') as temp:
+    calc_data = transfrom(temp.read())
 
 
-opt_ground_truth_file = open('output/opt_ground_truth_list.txt',"r")
-cal_ground_truth_file = open('output/cal_ground_truth_list.txt',"r")
+iterations_count = min(len(calc_data),len(actual_data))
 
-opt_ground_truth_list = opt_ground_truth_file.read().split('\n')
-cal_ground_truth_list = cal_ground_truth_file.read().split('\n')
+[actual_data, calc_data] = [actual_data[0:iterations_count],calc_data[0:iterations_count]]
 
-num_iterations = len(cal_ground_truth_list)
 
-def get_list(line):
-    res = []
-    arr = re.findall('([0-9]+, [0-9]+)',re.split(r'[0-9]+ +', line)[1])
-    for p in arr:
-        res.append(eval('('+p+')'))
-    return res
 
-# t_ps points from ground truth file [points], point => [(posX,posY), ...]
-t_ps = list(map(get_list, opt_ground_truth_list[0:num_iterations]))
-# d_ps points detected by your program [points], point => [(posX,posY), ...]
-d_ps = list(map(get_list, cal_ground_truth_list[0:num_iterations]))
-# max_distance should equal diagonal length of frame to ensure 100% or lower error
-max_distance = 400
+people_count = len(calc_data[0])
+people = []
+max_distance_kmean = float('inf')
+max_confidence = 5 ## in seconds
+diagonal_distance = 860 ## in pixels
+punishment = 0.2
+marginal_error_radius = 100 ## in pixels
 
-f= open('output/accuracy.txt',"w+")
-f.write(str(1 - calc_error(t_ps, d_ps, max_distance)))
-f.close()
 
-opt_ground_truth_file.close()
-cal_ground_truth_file.close()
+for i in range(people_count):
+    people.append([None, 0, None, 0])
+
+agg_sum = 0
+agg_count = 0
+
+class MDPoint(DPoint):
+    def __init__(self, pos_x, pos_y, color, s_i, id):        
+        # pos_x & pos_y in the top view
+        # s_i stands for stream index
+        super().__init__(pos_x, pos_y, color, s_i)
+        self.id = id
+
+for i in range(iterations_count):
+    
+    d_points = []
+    
+    j = 0
+    for c in actual_data[i]:
+        if c is not None:
+            d_points.append(MDPoint(c[0], c[1], (0,0,0), 0, j))
+        j += 1
+
+    j = 0
+    for c in calc_data[i]:
+        if c is not None:
+            d_points.append(MDPoint(c[0], c[1], (0,0,0), 1, j))
+        j += 1
+
+    clusters = KMeans.predict(d_points)
+    
+    for cluster in clusters:
+        try:
+            [first_d_point, second_d_point] = cluster.d_points
+            if first_d_point.s_i != 0:
+                [first_d_point, second_d_point] = [second_d_point, first_d_point]
+            if people[first_d_point.id][0] is None:
+                # print('1')
+                people[first_d_point.id] = [second_d_point.id, 1, None, 0]
+            elif people[first_d_point.id][0] == second_d_point.id:
+                # print('2')
+                confidence = min(people[first_d_point.id][1] + 1, max_confidence)
+                people[first_d_point.id] = [second_d_point.id, confidence , None, 0]
+            else:
+                confidence = people[first_d_point.id][1] - 1
+                if confidence == 0:
+                    people[first_d_point.id] = [second_d_point.id, 1 , None, people[first_d_point.id][3]]
+                else:
+                    if people[first_d_point.id][2] == None:
+                        people[first_d_point.id] = [people[first_d_point.id][0], confidence , second_d_point.id, people[first_d_point.id][3] + punishment]
+                    elif people[first_d_point.id][2] == second_d_point.id:
+                        people[first_d_point.id] = [people[first_d_point.id][0], confidence , second_d_point.id, people[first_d_point.id][3]]
+                    else:
+                        people[first_d_point.id] = [people[first_d_point.id][0], confidence , second_d_point.id, people[first_d_point.id][3]+ punishment]
+            distance = Point.calcDist(first_d_point, second_d_point)
+            if distance >= marginal_error_radius:
+                error = (distance / diagonal_distance)
+                error = max(people[first_d_point.id][3], error)
+                error = min(1, error)
+                # print(people)
+                agg_sum +=  error
+        except :
+            agg_sum += 1
+        agg_count += 1
+
+
+error = agg_sum / agg_count if agg_count != 0 else 0
+
+print(1 - error)

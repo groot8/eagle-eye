@@ -1,10 +1,13 @@
 import cv2
 import math
 import numpy as np
+import os
+import time
+from knn import *
 
 # configuration
 class Config:
-    cluster_max_error = 200 # max distance between d_points to form a cluster
+    cluster_max_error = 100 # max distance between d_points to form a cluster
     person_max_displacement = 100 # max distance between clusters & persons to form a person_cluster_cluster
     person_life = 3 # number of times that a person won't appear in any person_cluster_cluster before damaged
     max_intersection_over_union = 0.2 # max ratio between trackers overlapping on each other
@@ -46,12 +49,11 @@ class DPoint(Point):
 # group of d_points that represent a person
 class Cluster(Point):
 
-    def __init__(self, i_d_point = None, detection_features = np.array([])):
+    def __init__(self, i_d_point = None):
         # i_d_point stands for initial point for a cluster
         self.d_points = []
         if i_d_point is not None:
             self.addDPoint(i_d_point)
-        self.detection_features = detection_features
 
     def replaceRoot(self, cluster):
         self.d_points = cluster.d_points
@@ -61,11 +63,6 @@ class Cluster(Point):
         (pos_x, pos_y, b, g, r) = (0, 0, 0, 0, 0)
         length = len(self.d_points)
         for i in range(length):
-            if i == 0:
-                # make sure copy does deeb copy of the features xDD
-                self.detection_features = self.d_points[i].detection_features.copy()
-            else:
-                self.detection_features += self.d_points[i].detection_features
             pos_x += self.d_points[i].pos_x
             pos_y += self.d_points[i].pos_y
             b += self.d_points[i].color[0]
@@ -73,7 +70,6 @@ class Cluster(Point):
             r += self.d_points[i].color[2]
         (pos_x, pos_y, b, g, r) = (int(pos_x/length), int(pos_y/length), int(b/length), int(g/length), int(r/length))
         (self.pos_x, self.pos_y, self.color) = (pos_x, pos_y, (b, g, r))
-        self.detection_features = self.detection_features / length
 
     def addDPoint(self, d_point):
         self.d_points.append(d_point)
@@ -224,7 +220,7 @@ class Person(Cluster):
                     cluster = person_or_cluster
             # fires when an id finds a match cluster
             # probably id just made a small displacement
-            if person is not None and cluster is not None:
+            if person is not None and cluster is not None and len(cluster.d_points) >= 2:
                 person.replaceRoot(cluster)
                 person.heal()
             # fires when an id doesn't find a match            
@@ -233,9 +229,25 @@ class Person(Cluster):
                 person.causeDamage()
             # first when a cluster doesn't find a match
             # probably someone new appeared
-            else:
-                # here goes your code
-                Person(cluster)
+            elif len(cluster.d_points) >= 2:
+                features = []
+                for d_point in cluster.d_points:
+                    features.append(d_point.detection_features)
+                id = Knn.predict(features)
+                if id is None:
+                    Person(cluster)
+                else:
+                    person = Person.persons_db[id]
+                    person.replaceRoot(cluster)
+                    person.heal()
         
         del person_cluster_clusters
-        
+    
+    # this method is responsible for generating list_labels_features for the knn model
+    @staticmethod
+    def get_list_labels_features():
+        list_labels_features = []
+        for id in Person.persons_db:
+            for d_point in Person.persons_db[id].d_points:
+                list_labels_features.append([id, d_point.detection_features])
+        return list_labels_features
