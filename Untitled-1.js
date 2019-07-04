@@ -1,24 +1,3 @@
-<!DOCTYPE html>
-<html>
-  
-<head>
-<title>Simple Canvas Example</title>
-<style>
-canvas {
-    border: 3px #CCC solid;
-}
-</style>
-</head>
- 
-<body>
-<div id="container">
-    <canvas id="myCanvas" height="600" width="450">
-        
-    </canvas>
-</div>
-
-<script>
-
 var data = [{},
     {},
     {},
@@ -258,87 +237,24 @@ var data = [{},
     
     ]
 
+
+
+
+
+
 function transform(data, factor = 1){
-return data.reduce((aggr, c)=>{
-    for(k in c){
-        if (!~aggr.indexOf(k)) {
-            aggr.push(k)
+    return data.reduce((aggr, c)=>{
+        for(k in c){
+            if (!~aggr.indexOf(k)) {
+                aggr.push(k)
+            }
         }
-    }
-    return aggr
-}, []).reduce((aggr, id) =>{
-    aggr[id] = data.map(e => e[id] === undefined ? undefined : e[id].map(e => e * factor))
-    return aggr
-}, {})
-}
-var persons = transform(data) 
-
-var mainCanvas = document.querySelector("#myCanvas");
-var mainContext = mainCanvas.getContext("2d");
- 
-var canvasWidth = mainCanvas.width;
-var canvasHeight = mainCanvas.height;
-
-var requestAnimationFrame = window.requestAnimationFrame || 
-                            window.mozRequestAnimationFrame || 
-                            window.webkitRequestAnimationFrame || 
-                            window.msRequestAnimationFrame;
-var i = 0;
-var max_i = persons[1].length 
-var ids_length = Object.keys(persons).length
-var framesPerSecond = 5;
-
-var colors = ['#540e33' , '#6e9086','#63aabc','#60204b','#f76262','#121b74','#52437b']
-
-hidden_ids = [4]
-
-function drawView(){
-    mainContext.clearRect(0, 0, canvasWidth, canvasHeight);
-    
-    // color in the background
-    mainContext.fillStyle = "#FFF";
-    mainContext.fillRect(0, 0, canvasWidth, canvasHeight);
-    
-    for(k in persons){
-        if(!~hidden_ids.indexOf(+k)){
-            console.log(k)
-            drawCircle(mainContext, persons[k], i, colors[k])
-        }
-    }
-
-    setTimeout(function() {
-            requestAnimationFrame(drawView);
-        }, 1000 / framesPerSecond);
-    
-    i+=1;
-    i = i >= max_i ? 0 : i
+        return aggr
+    }, []).reduce((aggr, id) =>{
+        aggr[id] = data.map(e => e[id] === undefined ? undefined : e[id].map(e => e * factor))
+        return aggr
+    }, {})
 }
 
-function drawCircle(mainContext, pos, i, color) {
-
-    if (pos[i] === undefined) return
-    
-     // draw the circle
-     mainContext.beginPath();
-      
-     var radius = 10;
-
-  
-    var x =pos[i][0] ;
-    var y =pos[i][1] ;
-     mainContext.arc(x, y, radius, 0, Math.PI * 2, false);
-     mainContext.closePath();
-      
-     // color in the circle
-     mainContext.fillStyle = color;
-     mainContext.fill();
-}
-
-drawView()
-    
-
-
-
-</script>
-</body>
-</html>
+let f = transform(data , 1);
+f
