@@ -12,6 +12,7 @@ class Config:
     person_life = 3 # number of times that a person won't appear in any person_cluster_cluster before damaged
     max_intersection_over_union = 0.2 # max ratio between trackers overlapping on each other
     detection_interval = 1 # interval between detections
+    delta_momentum = 0.8 #momentum to update persons that doesn't have a match at some frame before damaged
 
 # base class
 class Point:
@@ -148,6 +149,8 @@ class Person(Cluster):
         self.id = Person.count
         Person.persons_db[self.id] = self
         self.life = Config.person_life
+        self.f_prev_pos = None
+        self.s_prev_pos = None
 
     def imDraw(self, img, p_size, l_size):
         cv2.putText(img, str(self.id), (self.pos_x - 5, self.pos_y - 15),
@@ -162,6 +165,21 @@ class Person(Cluster):
 
     def damaged(self):
         return self.life <= 0
+
+    def stepForward(self):
+        if self.s_prev_pos is None:
+            self.s_prev_pos = [self.pos_x, self.pos_y]
+        elif self.f_prev_pos is None:
+            self.f_prev_pos = [self.pos_x, self.pos_y]
+        else:
+            d_x = self.f_prev_pos[0] - self.s_prev_pos[0]        
+            d_y = self.f_prev_pos[1] - self.s_prev_pos[1]
+            self.s_prev_pos = self.f_prev_pos        
+            self.f_prev_pos = [
+                int(self.s_prev_pos[0] + d_x*Config.delta_momentum), 
+                int(self.s_prev_pos[1] + d_y*Config.delta_momentum)
+            ]
+            self.pos_x, self.pos_y = self.f_prev_pos[0], self.f_prev_pos[1]
 
     report_file_path = '/home/yousif-elmos/Desktop/college/eagle-eye/output/report.json'
 
@@ -195,7 +213,7 @@ class Person(Cluster):
     # this method is responsible for updating ids positions and decide
     # what clusters should make new persons and what should not
     @staticmethod
-    def updateIds(d_points):
+    def updateIds(d_points, accept_new_ids):
         # get current view clusters from d_points
         clusters = KMeans.predict(d_points, Config.cluster_max_error)
         # cluster the previous clusters with persons detected
@@ -226,10 +244,11 @@ class Person(Cluster):
             # fires when an id doesn't find a match            
             # probably that id disappeard from that frame
             elif cluster is None:
+                person.stepForward()
                 person.causeDamage()
             # first when a cluster doesn't find a match
             # probably someone new appeared
-            elif len(cluster.d_points) >= 2:
+            elif len(cluster.d_points) >= 2 and accept_new_ids:
                 features = []
                 for d_point in cluster.d_points:
                     features.append(d_point.detection_features)

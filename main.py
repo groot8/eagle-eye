@@ -65,17 +65,23 @@ f= open(ground_truth_file_path,"w+")
 f.close()
 set_ground_truth_file_path(ground_truth_file_path)
 
-try:
-    i = 0
-    while True:
-        i += 1
-        for stream in streams:
-            stream.forward()
-        Avatar.learn()
-        if i % 25 == 0:
-            Knn.learn(Person.get_list_labels_features())
-            i = 0
-except:
-    pass
+# try:
+i = 0
+j = 0
+while True:
+    i += 1
+    j += 1
+    for stream in streams:
+        stream.forward()
+    if i % 25 == 0:
+        Avatar.learn(accept_new_ids = True)
+        j = 0
+    else:
+        Avatar.learn(accept_new_ids = False)
+    if i % 25 == 0:
+        Knn.learn(Person.get_list_labels_features())
+        i = 0
+# except:
+#     pass
 
 

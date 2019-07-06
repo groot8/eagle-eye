@@ -78,11 +78,11 @@ class Avatar():
 
     d_points = []
 
-    def learn():
+    def learn(accept_new_ids = False):
         global shape # has shape of original frame
         board = np.zeros(shape, np.uint8)
         board[:] = (0, 0, 0)
-        Person.updateIds(Avatar.d_points)
+        Person.updateIds(Avatar.d_points, accept_new_ids)
         Person.imDrawPersons(board)
         cv2.imshow("Board", board)
         Avatar.d_points = []
