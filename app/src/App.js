@@ -1,15 +1,9 @@
 import React, { Component } from 'react';
 import './App.css';
-import { sizing } from '@material-ui/system';
-import { withRouter } from 'react-router-dom'
-import { Route, Link, BrowserRouter as Router } from 'react-router-dom';
-import Paper from '@material-ui/core/Paper';
 import { makeStyles } from '@material-ui/core/styles';
-import Tabs from '@material-ui/core/Tabs';
-import Tab from '@material-ui/core/Tab';
 import ButtonAppBar from "./components/AppBar";
-import FixedContainer from './components/Container';
 import CenteredTabs from './components/Tabs';
+
 
 // to parse input file
 // data = data.split('\n')
