@@ -78,6 +78,9 @@ class Avatar():
 
     d_points = []
 
+    first_time = True
+
+
     def learn(accept_new_ids = False):
         global shape # has shape of original frame
         board = np.zeros(shape, np.uint8)
@@ -85,6 +88,12 @@ class Avatar():
         Person.updateIds(Avatar.d_points, accept_new_ids)
         Person.imDrawPersons(board)
         cv2.imshow("Board", board)
+        if Avatar.first_time :
+            fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+            Avatar.writer = cv2.VideoWriter('output/board.avi', fourcc, 30,
+                                        (shape[1], shape[0]), True)
+            Avatar.first_time = False
+        Avatar.writer.write(board)
         Avatar.d_points = []
 
     def getFrame(self):

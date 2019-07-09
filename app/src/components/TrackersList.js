@@ -1,50 +1,65 @@
-import React, { Component } from 'react'
+import React, {
+  Component
+} from 'react'
 
 import axios from 'axios';
 
- class TrackersList extends Component{
+var colors = ['#34495e', '#2ecc71', '#3498db', '#e74c3c', '#d35400', '#34495e', '#ff7a8a', '#ffb142', '#2f3640', '#a64942']
+
+
+class TrackersList extends Component {
   state = {
-    list_ids : []
+    list_ids: [
+      [1, false],
+      [2, false],
+      [3, false],
+      [4, false],
+      [5, false],
+      [6, false]
+    ]
   }
-  getlist(){
-    return axios.get('http://0.0.0.0:5000/ids').then(r => r.data).catch(()=>[])
-  }
-  componentDidMount(){
-    setInterval(() => {
-      this.getlist().then(list_ids => {
-        this.setState(()=>{
-          return {
-            list_ids,
-            disabled: false
-          }
-        })
-      })
-    }, 2000);
-  }
-  toggleVis(id){
-    if (this.state.disabled) return
-    var update = (disabled)=>{
-      this.setState(()=>{
-        return {
-          disabled
+  toggleVis(id) {
+    this.setState((p) => {
+      var list_ids = p.list_ids.slice()
+      for (let i = 0; i < list_ids.length; i++) {
+        if (list_ids[i][0] == id[0]) {
+          list_ids[i][1] = !list_ids[i][1]
         }
-      })
-    }
-    update(true)
-    axios.get('http://0.0.0.0:5000/ids/'+(id[1] ? 'show': 'hide')+'?id='+id[0]).then(()=>{
-      update(false)
-    }).catch(()=>{
-      update(false)
+      }
+      window.excluded_ids = list_ids.filter(e => e[1]).map(e => e[0])
+      return {
+        list_ids
+      }
     })
   }
-  render(){
-    return (
-      <div className='side-bar'>
-      <h3>List of Trackers</h3>
-        {this.state.list_ids.map(id => (<div className={`person ${id[1]?'red':'green'} ${this.state.disabled?'disabled':''}` } key={id[0]} onClick={this.toggleVis.bind(this,id)}> person {id[0]}</div>))}
-      </div>
-    )
-  }
-}
 
-export default TrackersList;
+  render() {
+      return ( <
+        div className = 'side-bar' >
+        <
+        h3 > List of Trackers < /h3> {
+        this.state.list_ids.map(id => ( < div className = {
+              `person ${id[1]?'red':'green'} ${this.state.disabled?'disabled':''}`
+            }
+            key = {
+              id[0]
+            }
+            onClick = {
+              this.toggleVis.bind(this, id)
+            } >
+            <
+            span className = "circle"
+            style = {
+              {
+                backgroundColor: colors[id[0]]
+              }
+            } > < /span>
+            ID({
+              id[0]
+            }) < /div>))} < /
+            div >
+          )
+        }
+      }
+
+      export default TrackersList;

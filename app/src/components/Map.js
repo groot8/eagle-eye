@@ -1564,16 +1564,20 @@ class Map extends Component {
 
             p.draw = () => {
 
-
                 p.frameRate(25);
 
        
 
                 for (let ps in persons) {
+                    if (window.excluded_ids !== undefined) {
+                        if (~window.excluded_ids.indexOf(+ps)) {
+                            continue;
+                        }
+                    }
                     let items = persons[ps];
 
                     if (items[i] && items[i][0]) {
-                  
+                        
                         let [x, y] = items[i];
                         let [x1, y1] = items[i + 1] || [x, y]
                         let [x2, y2] = items[i + 2] || [x1, y1];
