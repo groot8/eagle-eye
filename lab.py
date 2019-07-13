@@ -9,10 +9,10 @@ from knn import *
 class Config:
     cluster_max_error = 100 # max distance between d_points to form a cluster
     person_max_displacement = 100 # max distance between clusters & persons to form a person_cluster_cluster
-    person_life = 3 # number of times that a person won't appear in any person_cluster_cluster before damaged
+    person_life = 100 # number of times that a person won't appear in any person_cluster_cluster before damaged
     max_intersection_over_union = 0.2 # max ratio between trackers overlapping on each other
     detection_interval = 1 # interval between detections
-    delta_momentum = 0.8 #momentum to update persons that doesn't have a match at some frame before damaged
+    delta_momentum = 1 #momentum to update persons that doesn't have a match at some frame before damaged
 
 # base class
 class Point:
@@ -170,7 +170,8 @@ class Person(Cluster):
         if self.s_prev_pos is None:
             self.s_prev_pos = [self.pos_x, self.pos_y]
         elif self.f_prev_pos is None:
-            self.f_prev_pos = [self.pos_x, self.pos_y]
+            if self.pos_x != self.s_prev_pos[0] or self.pos_y != self.s_prev_pos[1]:
+                self.f_prev_pos = [self.pos_x, self.pos_y]
         else:
             d_x = self.f_prev_pos[0] - self.s_prev_pos[0]        
             d_y = self.f_prev_pos[1] - self.s_prev_pos[1]
